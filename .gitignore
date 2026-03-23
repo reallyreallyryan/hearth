@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Testing
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Hearth data (user-specific)
+hearth.db
+hearth.db-shm
+hearth.db-wal
+
+# Internal docs (not for public repo)
+hearth_project_brief.md
+
+# OS
+.DS_Store
+Thumbs.db
