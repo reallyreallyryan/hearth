@@ -7,7 +7,7 @@ Hearth is a local-first persistent AI memory system. Install it once, and every 
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/hearth.git
+git clone https://github.com/reallyreallyryan/hearth.git
 cd hearth
 pip install -e .
 hearth init

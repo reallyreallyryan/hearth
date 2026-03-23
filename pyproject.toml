@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Local-first persistent AI memory system exposed as an MCP server"
 requires-python = ">=3.11"
 license = "MIT"
-authors = [{ name = "Ryan" }]
+authors = [{ name = "Ryan Kelems" }]
 dependencies = [
     "apsw>=3.46",
     "sqlite-vec>=0.1.6",

@@ -44,7 +44,7 @@ If you don't want Ollama, that's fine. Hearth works without it (search will use 
 In Terminal, paste these two lines:
 
 ```
-git clone https://github.com/YOUR_USERNAME/hearth.git
+git clone https://github.com/reallyreallyryan/hearth.git
 cd hearth
 ```
 
