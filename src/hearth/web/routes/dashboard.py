@@ -62,3 +62,26 @@ async def dashboard(
         })
 
     return templates.TemplateResponse(request, "dashboard.html", context)
+
+
+@router.get("/export/{fmt}", response_model=None)
+async def export_memories(
+    request: Request,
+    fmt: str,
+    db: HearthDB = Depends(get_db),
+):
+    """Export all memories as JSON or CSV file download."""
+    if fmt not in ("json", "csv"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Format must be 'json' or 'csv'")
+
+    data = db.export_memories(format=fmt)
+    media_type = "application/json" if fmt == "json" else "text/csv"
+    filename = f"hearth_memories.{fmt}"
+
+    from fastapi.responses import Response
+    return Response(
+        content=data,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -537,6 +537,32 @@ class TestProjects:
         assert "No projects yet" in response.text
 
 
+# ── Step 8: Export + Polish Tests ──────────────────────────────
+
+
+class TestExport:
+    def test_export_json(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/export/json")
+        assert response.status_code == 200
+        assert "application/json" in response.headers["content-type"]
+        assert "attachment" in response.headers["content-disposition"]
+        assert "hearth_memories.json" in response.headers["content-disposition"]
+
+    def test_export_csv(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/export/csv")
+        assert response.status_code == 200
+        assert "text/csv" in response.headers["content-type"]
+        assert "hearth_memories.csv" in response.headers["content-disposition"]
+
+    def test_export_invalid_format(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/export/xml")
+        assert response.status_code == 400
+
+    def test_export_empty_db(self, web_client) -> None:
+        response = web_client.get("/export/json")
+        assert response.status_code == 200
+
+
 class TestCountMemories:
     def test_count_all(self, seeded_db) -> None:
         count = seeded_db.count_memories()
