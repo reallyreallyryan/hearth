@@ -65,6 +65,9 @@ hearth remember "some fact"    # Store a memory from the command line
 hearth search "query"          # Search your memories
 hearth transcribe audio.wav    # Transcribe audio locally (print text, no storage)
 hearth ingest audio.wav        # Transcribe + embed + store as searchable memory
+hearth ui                      # Start web dashboard (localhost:8274)
+hearth ui --port 9000          # Custom port
+hearth ui --open               # Start and open browser
 ```
 
 Options for `remember`: `-c category` (general, learning, pattern, reference, decision), `-p project`, `-t "tag1,tag2"`
@@ -131,9 +134,17 @@ sqlite3 ~/hearth/hearth.db "SELECT COALESCE(project, '(global)'), COUNT(*) FROM 
 sqlite3 ~/hearth/hearth.db -json "SELECT * FROM memories WHERE archived = 0;"
 ```
 
-### With a GUI
+### With the Web Dashboard
 
-[DB Browser for SQLite](https://sqlitebrowser.org) is a free app that lets you browse, search, and edit your `hearth.db` visually. Just open `~/hearth/hearth.db`.
+```bash
+hearth ui --open
+```
+
+Opens a local web dashboard at `localhost:8274` where you can browse, search, filter, edit, and archive memories. Dark mode by default. Also shows database stats, Ollama status, and project management. Install with `pip install hearth-memory[ui]`.
+
+### With DB Browser
+
+[DB Browser for SQLite](https://sqlitebrowser.org) is a free app that lets you browse and edit your `hearth.db` visually. Just open `~/hearth/hearth.db`.
 
 ## How It Works
 
@@ -147,6 +158,8 @@ Hearth has two layers:
 
 **The Spine** — a Python MCP server that exposes the Brain to any MCP-compatible client. It runs over stdio (Claude Desktop spawns it as a subprocess) and handles all read/write operations.
 
+**The Shell** — a local web dashboard (`hearth ui`) built with FastAPI, Jinja2, and htmx. Browse, search, filter, edit, and archive memories through a browser. Dark mode, no build step, no JavaScript framework. Runs alongside the MCP server — both read/write the same `hearth.db`.
+
 Embeddings are generated locally via Ollama using the `nomic-embed-text` model (768 dimensions). If Ollama isn't available, the server still works — search falls back to keyword-only mode, and embeddings are backfilled when Ollama comes online.
 
 **Audio Transcription** — Hearth can transcribe audio files locally using faster-whisper (a CTranslate2-based Whisper implementation). `hearth ingest audio.wav` transcribes the audio, generates an embedding, and stores it as a searchable memory. No cloud APIs — everything runs on your machine.
@@ -157,6 +170,7 @@ Embeddings are generated locally via Ollama using the `nomic-embed-text` model (
 - Ollama (optional — for semantic search)
 - ~300MB disk space for the embedding model
 - faster-whisper (optional — for audio transcription, install with `pip install hearth-memory[transcribe]`)
+- FastAPI + Jinja2 (optional — for web dashboard, install with `pip install hearth-memory[ui]`)
 
 ## Credits
 
@@ -164,6 +178,8 @@ Built with:
 - [Ollama](https://ollama.ai) — local model inference
 - [nomic-embed-text](https://ollama.com/library/nomic-embed-text) — embedding model
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — local audio transcription (CTranslate2)
+- [FastAPI](https://fastapi.tiangolo.com) — web dashboard backend
+- [htmx](https://htmx.org) — lightweight dynamic UI interactions
 - [sqlite-vec](https://github.com/asg017/sqlite-vec) — vector similarity search for SQLite
 - [APSW](https://github.com/rogerbinns/apsw) — Python SQLite wrapper with extension support
 - [MCP SDK](https://github.com/modelcontextprotocol/python-sdk) — Model Context Protocol server framework

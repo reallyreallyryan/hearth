@@ -57,10 +57,10 @@ You should now be inside the `hearth` folder.
 Paste this:
 
 ```
-pip install -e ".[transcribe]"
+pip install -e ".[transcribe,ui]"
 ```
 
-This installs Hearth with audio transcription support (faster-whisper). If you don't need audio transcription, `pip install -e .` works too.
+This installs Hearth with audio transcription and the web dashboard. If you only want the core memory system, `pip install -e .` works too.
 
 You'll see it download some dependencies. This takes about 30 seconds.
 
@@ -76,7 +76,7 @@ You should see:
 hearth, version 0.1.1
 ```
 
-**If you see `command not found`:** Try `pip3 install -e ".[transcribe]"` instead, then use `hearth --version` again.
+**If you see `command not found`:** Try `pip3 install -e ".[transcribe,ui]"` instead, then use `hearth --version` again.
 
 ---
 
@@ -183,6 +183,27 @@ hearth search "something from the audio"
 ```
 
 The transcribed text is now stored in your Hearth database, searchable by meaning — from Terminal, Claude Desktop, or LM Studio.
+
+---
+
+## Step 4c: Open the Web Dashboard
+
+If you installed with `[ui]`, you can browse your memories in a web interface:
+
+```
+hearth ui --open
+```
+
+This starts a local dashboard at `http://localhost:8274` and opens it in your browser. You'll see:
+
+- **Memories page** — browse, search, filter, edit, and archive your memories
+- **Dashboard** — stats cards, memory breakdowns by category/project, Ollama status
+- **Projects** — create and manage projects to organize your memories
+- **Export** — download all memories as JSON or CSV
+
+The dashboard runs alongside the MCP server — both read/write the same database. Dark mode by default.
+
+Press Ctrl+C in Terminal to stop the dashboard when you're done.
 
 ---
 

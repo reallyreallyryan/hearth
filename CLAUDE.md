@@ -11,11 +11,11 @@ Hearth is a local-first persistent AI memory system. Users download it, install 
 If the user asks to set up, install, or get Hearth running:
 
 ```bash
-pip install -e ".[transcribe]"
+pip install -e ".[transcribe,ui]"
 hearth init
 ```
 
-The `[transcribe]` extra installs faster-whisper for audio transcription. Without it, all memory/MCP features still work — just no `hearth transcribe` or `hearth ingest`.
+Optional extras: `[transcribe]` adds faster-whisper for audio transcription, `[ui]` adds the web dashboard. Without them, all memory/MCP features still work.
 
 `hearth init` will:
 1. Create `~/hearth/` with the database and config
@@ -35,7 +35,7 @@ For detailed instructions, see `INSTALL_GUIDE.md`.
 
 - **Brain:** SQLite database (`hearth.db`) with structured memory storage, FTS5, and sqlite-vec for embeddings
 - **Spine:** Python MCP server exposing memory/project tools to any MCP client (Claude Desktop, LM Studio, Cursor, etc.)
-- **Shell:** CLI tools (`hearth init`, `hearth serve`) + web UI (Phase 2)
+- **Shell:** CLI tools (`hearth init`, `hearth serve`, `hearth ui`) + web dashboard (FastAPI + htmx)
 
 The MCP server IS the product. The .db file is the product. Everything else is a front door.
 
@@ -45,8 +45,9 @@ Follow the MCP-first strategy in the project brief:
 1. **Phase 1 — Brain + Spine (MVP):** `schema.sql` → `db.py` → `search.py` → `embeddings.py` → `hearth_server.py` → `config.py` → tests → package as pip-installable CLI
    - **Phase 1a — Transcription (DONE):** `transcribe.py` — local audio transcription via faster-whisper. `hearth transcribe` CLI command.
    - **Phase 1b — Ingest Pipeline (DONE):** `hearth ingest` — transcribe audio → embed → store as searchable memory. Full loop: voice → database → queryable via MCP.
-2. **Phase 2 — Shell:** `install.sh` → Web UI → setup wizard → local chat
-3. **Phase 3 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
+2. **Phase 3a — Web Dashboard (DONE):** `hearth ui` — local web dashboard for browsing, searching, editing, and managing memories. FastAPI + Jinja2 + htmx. Dark mode. No build step.
+3. **Phase 3b — Audio Drag-and-Drop:** Browser-based audio file upload with transcription preview (deferred).
+4. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
 
 **Phase 1 is the entire shippable product. A user should be able to `pip install hearth-memory`, run `hearth init && hearth serve`, and have persistent memory working in Claude Desktop and LM Studio within 2 minutes.**
 
@@ -59,7 +60,7 @@ Follow the MCP-first strategy in the project brief:
 - **Embeddings:** nomic-embed-text via Ollama (768 dimensions)
 - **Transcription:** faster-whisper (CTranslate2 backend) — local Whisper inference, no cloud APIs. Optional dependency.
 - **Chat Model:** phi3:mini or mistral:7b via Ollama
-- **Web UI:** Lightweight — vanilla HTML/JS/CSS or minimal React. No heavy frameworks.
+- **Web UI:** FastAPI + Jinja2 + htmx. Dark mode. No React, no build step, no node_modules. Optional dependency.
 - **Config:** YAML (`config.yaml`)
 - **Tests:** pytest
 
@@ -88,7 +89,7 @@ This mirrors the cairn SCMS (Structured Context Memory System) architecture:
 - No background agents or autonomous tasks
 - No custom model training
 - No mobile support
-- No web UI in Phase 1 — the MCP server is the product
+- Web UI is optional (`pip install hearth-memory[ui]`) — the MCP server is the core product
 - Keep dependencies minimal — this runs on user machines
 
 ## CLI Interface (Phase 1 deliverable)
@@ -105,6 +106,7 @@ hearth remember "x"      # Quick-store a memory from the command line
 hearth search "x"        # Quick-search from the command line
 hearth transcribe f.wav  # Transcribe an audio file (print text, no DB storage)
 hearth ingest f.wav      # Transcribe + embed + store as searchable memory
+hearth ui                # Start the web dashboard (localhost:8274)
 ```
 
 `hearth transcribe` options: `--model` (tiny/base/small/medium/large-v3/turbo), `--json`, `--segments`
