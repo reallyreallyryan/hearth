@@ -5,10 +5,10 @@
               hx-swap="innerHTML">
             <div class="form-group">
                 <label for="content">Content</label>
-                <textarea name="content" id="content" rows="4">{{ memory.content }}</textarea>
+                <textarea name="content" id="content" rows="5">{{ memory.content }}</textarea>
             </div>
-            <div class="filter-bar">
-                <div class="form-group" style="flex:1">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                <div class="form-group" style="margin-bottom: 0;">
                     <label for="category">Category</label>
                     <select name="category" id="category">
                         {% for cat in categories %}
@@ -16,7 +16,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="form-group" style="flex:1">
+                <div class="form-group" style="margin-bottom: 0;">
                     <label for="project">Project</label>
                     <select name="project" id="project">
                         <option value="">None</option>
@@ -25,7 +25,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="form-group" style="flex:1">
+                <div class="form-group" style="margin-bottom: 0;">
                     <label for="tags">Tags</label>
                     <input type="text" name="tags" id="tags"
                            value="{{ memory.tags | join(', ') if memory.tags else '' }}"
