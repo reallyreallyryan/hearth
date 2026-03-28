@@ -57,8 +57,10 @@ You should now be inside the `hearth` folder.
 Paste this:
 
 ```
-pip install -e .
+pip install -e ".[transcribe]"
 ```
+
+This installs Hearth with audio transcription support (faster-whisper). If you don't need audio transcription, `pip install -e .` works too.
 
 You'll see it download some dependencies. This takes about 30 seconds.
 
@@ -74,7 +76,7 @@ You should see:
 hearth, version 0.1.0
 ```
 
-**If you see `command not found`:** Try `pip3 install -e .` instead, then use `hearth --version` again.
+**If you see `command not found`:** Try `pip3 install -e ".[transcribe]"` instead, then use `hearth --version` again.
 
 ---
 
@@ -155,6 +157,32 @@ Embeddings: 1 (0 pending)
 Projects:   0 active
 ...
 ```
+
+---
+
+## Step 4b: Test Audio Transcription
+
+If you installed with `[transcribe]`, you can transcribe audio files locally. Grab any audio file (voice memo, podcast clip, etc.) and try:
+
+```
+hearth transcribe ~/path/to/audio.m4a --model base --segments
+```
+
+You should see timestamped text output. The first run downloads the Whisper model (~145MB for base).
+
+To transcribe AND store it as a searchable memory:
+
+```
+hearth ingest ~/path/to/audio.m4a --model base
+```
+
+Then search for it:
+
+```
+hearth search "something from the audio"
+```
+
+The transcribed text is now stored in your Hearth database, searchable by meaning — from Terminal, Claude Desktop, or LM Studio.
 
 ---
 

@@ -34,6 +34,12 @@ def _echo(msg: str) -> None:
     click.echo(msg, err=True)
 
 
+def _fmt_time(seconds: float) -> str:
+    """Format seconds as MM:SS.mmm for segment display."""
+    m, s = divmod(seconds, 60)
+    return f"{int(m):02d}:{s:06.3f}"
+
+
 @click.group()
 @click.version_option(__version__, prog_name="hearth")
 def cli() -> None:
@@ -298,5 +304,157 @@ def search(query: str, project: str | None, category: str | None, limit: int) ->
             if meta:
                 _echo(f"    [{', '.join(meta)}]")
             _echo(f"    id={mem['id'][:8]}... created={mem['created_at']}")
+
+    db.close()
+
+
+@cli.command()
+@click.argument("audio_file", type=click.Path(exists=True))
+@click.option("--model", "-m", default=None, help="Model size (tiny, base, small, medium, large-v3, turbo)")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+@click.option("--segments", is_flag=True, help="Show timestamped segments")
+def transcribe(audio_file: str, model: str | None, as_json: bool, segments: bool) -> None:
+    """Transcribe an audio file using local Whisper model."""
+    from hearth.transcribe import LocalTranscriber, TranscriptionError
+
+    config = load_config()
+    model_size = model or config.transcription.default_model
+
+    if not LocalTranscriber.is_available():
+        _echo("Error: faster-whisper is not installed.")
+        _echo("Install it with: pip install hearth-memory[transcribe]")
+        raise SystemExit(1)
+
+    _echo(f"Transcribing {audio_file} with model '{model_size}'...")
+
+    transcriber = LocalTranscriber(
+        model_size=model_size,
+        model_dir=config.transcription.model_dir,
+        device=config.transcription.device,
+        compute_type=config.transcription.compute_type,
+    )
+
+    try:
+        result = transcriber.transcribe(audio_file)
+    except TranscriptionError as e:
+        _echo(f"Error: {e}")
+        raise SystemExit(1)
+
+    if as_json:
+        output = {
+            "text": result.text,
+            "language": result.language,
+            "duration": result.duration,
+            "model": result.model_used,
+            "processing_time": result.processing_time,
+        }
+        if segments:
+            output["segments"] = [
+                {"start": s.start, "end": s.end, "text": s.text}
+                for s in result.segments
+            ]
+        _echo(json.dumps(output, indent=2, ensure_ascii=False))
+    else:
+        _echo(f"\nLanguage: {result.language}")
+        _echo(f"Duration: {result.duration:.1f}s")
+        _echo(f"Processing time: {result.processing_time:.1f}s")
+        speed = result.duration / result.processing_time if result.processing_time > 0 else 0
+        _echo(f"Speed: {speed:.1f}x realtime")
+        _echo(f"\n{'=' * 50}")
+
+        if segments:
+            for seg in result.segments:
+                timestamp = f"[{_fmt_time(seg.start)} -> {_fmt_time(seg.end)}]"
+                _echo(f"  {timestamp}  {seg.text}")
+        else:
+            _echo(result.text)
+
+
+@cli.command()
+@click.argument("audio_file", type=click.Path(exists=True))
+@click.option("--model", "-m", default=None, help="Model size (tiny, base, small, medium, large-v3, turbo)")
+@click.option("--project", "-p", default=None, help="Project name")
+@click.option("--category", "-c", default="general", help="Memory category")
+@click.option("--tags", "-t", default=None, help="Comma-separated tags (added to auto-generated tags)")
+def ingest(audio_file: str, model: str | None, project: str | None, category: str, tags: str | None) -> None:
+    """Transcribe an audio file and store it as a memory."""
+    from hearth.transcribe import LocalTranscriber, TranscriptionError
+
+    config = load_config()
+
+    if not config.db_path.exists():
+        _echo("Hearth not initialized. Run 'hearth init' first.")
+        raise SystemExit(1)
+
+    if not LocalTranscriber.is_available():
+        _echo("Error: faster-whisper is not installed.")
+        _echo("Install it with: pip install hearth-memory[transcribe]")
+        raise SystemExit(1)
+
+    model_size = model or config.transcription.default_model
+    _echo(f"Transcribing {audio_file} with model '{model_size}'...")
+
+    transcriber = LocalTranscriber(
+        model_size=model_size,
+        model_dir=config.transcription.model_dir,
+        device=config.transcription.device,
+        compute_type=config.transcription.compute_type,
+    )
+
+    try:
+        result = transcriber.transcribe(audio_file)
+    except TranscriptionError as e:
+        _echo(f"Error: {e}")
+        raise SystemExit(1)
+
+    _echo(f"  Language: {result.language}, Duration: {result.duration:.1f}s, "
+          f"Speed: {result.duration / result.processing_time:.1f}x realtime")
+
+    # Build tags: auto-generated metadata + user-provided
+    audio_name = Path(audio_file).name
+    auto_tags = [
+        f"audio:{audio_name}",
+        f"duration:{result.duration:.1f}s",
+        f"model:{result.model_used}",
+        f"lang:{result.language}",
+    ]
+    if tags:
+        auto_tags.extend(t.strip() for t in tags.split(","))
+
+    # Store memory
+    from hearth.db import HearthDB
+    from hearth.embeddings import OllamaEmbedder
+
+    db = HearthDB(config.db_path)
+    db.init_db()
+
+    try:
+        memory = db.store_memory(
+            result.text,
+            category=category,
+            project=project,
+            tags=auto_tags,
+            source="transcription",
+        )
+    except ValueError as e:
+        _echo(f"Error: {e}")
+        db.close()
+        raise SystemExit(1)
+
+    # Generate and store embedding
+    embedder = OllamaEmbedder(
+        base_url=config.ollama_base_url,
+        model=config.embedding.model,
+        dimensions=config.embedding.dimensions,
+    )
+    embed_result = asyncio.run(embedder.embed(result.text))
+    if embed_result:
+        db.store_embedding(memory["id"], embed_result.embedding)
+        _echo(f"  Stored memory {memory['id'][:8]}... with embedding")
+    else:
+        _echo(f"  Stored memory {memory['id'][:8]}... (no embedding — Ollama unavailable)")
+
+    _echo(f"\n  \"{result.text[:100]}{'...' if len(result.text) > 100 else ''}\"")
+    _echo(f"\nDone. Search with: hearth search \"<query>\"")
 
     db.close()

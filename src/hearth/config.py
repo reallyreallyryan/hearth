@@ -12,7 +12,7 @@ DEFAULT_DB_PATH = HEARTH_DIR / "hearth.db"
 DEFAULT_CONFIG_PATH = HEARTH_DIR / "config.yaml"
 
 VALID_CATEGORIES = {"general", "learning", "pattern", "reference", "decision"}
-VALID_SOURCES = {"user", "assistant", "system"}
+VALID_SOURCES = {"user", "assistant", "system", "transcription"}
 VALID_PROJECT_STATUSES = {"active", "paused", "completed", "archived"}
 
 
@@ -31,11 +31,20 @@ class SearchConfig:
 
 
 @dataclass
+class TranscriptionConfig:
+    default_model: str = "base"
+    model_dir: str | None = None
+    device: str = "auto"
+    compute_type: str = "default"
+
+
+@dataclass
 class HearthConfig:
-    version: str = "0.1.0"
+    version: str = "0.1.1"
     db_path: Path = field(default_factory=lambda: DEFAULT_DB_PATH)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
+    transcription: TranscriptionConfig = field(default_factory=TranscriptionConfig)
     ollama_base_url: str = "http://localhost:11434"
 
 
@@ -81,6 +90,21 @@ def load_config(config_path: Path | None = None) -> HearthConfig:
     if "fts_weight" in search:
         config.search.fts_weight = float(search["fts_weight"])
 
+    transcription = raw.get("transcription", {})
+    if "default_model" in transcription:
+        config.transcription.default_model = transcription["default_model"]
+    if "model_dir" in transcription:
+        model_dir = transcription["model_dir"]
+        if model_dir:
+            p = Path(model_dir)
+            if not p.is_absolute():
+                p = config_path.parent / p
+            config.transcription.model_dir = str(p.resolve())
+    if "device" in transcription:
+        config.transcription.device = transcription["device"]
+    if "compute_type" in transcription:
+        config.transcription.compute_type = transcription["compute_type"]
+
     return config
 
 
@@ -88,7 +112,7 @@ def save_default_config(config_path: Path) -> None:
     """Write default config.yaml to disk."""
     data = {
         "hearth": {
-            "version": "0.1.0",
+            "version": "0.1.1",
             "db_path": "./hearth.db",
         },
         "models": {
@@ -102,6 +126,11 @@ def save_default_config(config_path: Path) -> None:
             "default_limit": 10,
             "semantic_weight": 0.6,
             "fts_weight": 0.4,
+        },
+        "transcription": {
+            "default_model": "base",
+            "device": "auto",
+            "compute_type": "default",
         },
     }
     config_path.parent.mkdir(parents=True, exist_ok=True)

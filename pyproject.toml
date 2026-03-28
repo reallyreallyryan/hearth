@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hearth-memory"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local-first persistent AI memory system exposed as an MCP server"
 requires-python = ">=3.11"
 license = "MIT"
@@ -23,9 +23,15 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
 ]
+transcribe = [
+    "faster-whisper>=1.1.0",
+]
 
 [project.scripts]
 hearth = "hearth.cli:cli"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hearth"]
+
+[tool.pytest.ini_options]
+markers = ["slow: marks tests that download models or require network"]

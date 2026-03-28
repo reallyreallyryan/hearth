@@ -63,11 +63,17 @@ hearth serve                   # Start the MCP server (stdio transport)
 hearth status                  # Show memory count, embedding status, Ollama availability
 hearth remember "some fact"    # Store a memory from the command line
 hearth search "query"          # Search your memories
+hearth transcribe audio.wav    # Transcribe audio locally (print text, no storage)
+hearth ingest audio.wav        # Transcribe + embed + store as searchable memory
 ```
 
 Options for `remember`: `-c category` (general, learning, pattern, reference, decision), `-p project`, `-t "tag1,tag2"`
 
 Options for `search`: `-p project`, `-c category`, `-n limit`
+
+Options for `transcribe`: `-m model` (tiny/base/small/medium/large-v3/turbo), `--json`, `--segments`
+
+Options for `ingest`: `-m model`, `-p project`, `-c category`, `-t "tag1,tag2"`
 
 ## MCP Tools
 
@@ -143,17 +149,21 @@ Hearth has two layers:
 
 Embeddings are generated locally via Ollama using the `nomic-embed-text` model (768 dimensions). If Ollama isn't available, the server still works — search falls back to keyword-only mode, and embeddings are backfilled when Ollama comes online.
 
+**Audio Transcription** — Hearth can transcribe audio files locally using faster-whisper (a CTranslate2-based Whisper implementation). `hearth ingest audio.wav` transcribes the audio, generates an embedding, and stores it as a searchable memory. No cloud APIs — everything runs on your machine.
+
 ## Requirements
 
 - Python 3.11+
 - Ollama (optional — for semantic search)
 - ~300MB disk space for the embedding model
+- faster-whisper (optional — for audio transcription, install with `pip install hearth-memory[transcribe]`)
 
 ## Credits
 
 Built with:
 - [Ollama](https://ollama.ai) — local model inference
 - [nomic-embed-text](https://ollama.com/library/nomic-embed-text) — embedding model
+- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — local audio transcription (CTranslate2)
 - [sqlite-vec](https://github.com/asg017/sqlite-vec) — vector similarity search for SQLite
 - [APSW](https://github.com/rogerbinns/apsw) — Python SQLite wrapper with extension support
 - [MCP SDK](https://github.com/modelcontextprotocol/python-sdk) — Model Context Protocol server framework
