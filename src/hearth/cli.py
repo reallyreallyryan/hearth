@@ -458,3 +458,30 @@ def ingest(audio_file: str, model: str | None, project: str | None, category: st
     _echo(f"\nDone. Search with: hearth search \"<query>\"")
 
     db.close()
+
+
+@cli.command()
+@click.option("--port", "-p", default=8274, help="Port to serve on")
+@click.option("--open", "open_browser", is_flag=True, help="Open browser automatically")
+def ui(port: int, open_browser: bool) -> None:
+    """Start the Hearth web dashboard."""
+    config = load_config()
+
+    if not config.db_path.exists():
+        _echo("Hearth not initialized. Run 'hearth init' first.")
+        raise SystemExit(1)
+
+    try:
+        from hearth.web.app import run_app
+    except ImportError:
+        _echo("Web UI dependencies not installed.")
+        _echo("Install with: pip install hearth-memory[ui]")
+        raise SystemExit(1)
+
+    _echo(f"Starting Hearth dashboard at http://localhost:{port}")
+
+    if open_browser:
+        import webbrowser
+        webbrowser.open(f"http://localhost:{port}")
+
+    run_app(port=port)

@@ -1,0 +1,1 @@
+"""Hearth Web UI package."""

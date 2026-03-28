@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hearth{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+    <div class="layout">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <span class="logo">&#x1f525;</span>
+                <span class="logo-text">Hearth</span>
+            </div>
+            <ul class="nav-links">
+                <li>
+                    <a href="/dashboard" class="{% if active_page == 'dashboard' %}active{% endif %}">
+                        <span class="nav-icon">&#x25A0;</span> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="/memories" class="{% if active_page == 'memories' %}active{% endif %}">
+                        <span class="nav-icon">&#x25C6;</span> Memories
+                    </a>
+                </li>
+                <li>
+                    <a href="/projects" class="{% if active_page == 'projects' %}active{% endif %}">
+                        <span class="nav-icon">&#x25CB;</span> Projects
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <span class="version">Hearth v{{ version }}</span>
+            </div>
+        </nav>
+        <main class="content">
+            {% block content %}
+            <div class="welcome">
+                <h1>Welcome to Hearth</h1>
+                <p>Your local-first AI memory system.</p>
+            </div>
+            {% endblock %}
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>
