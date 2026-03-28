@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Projects — Hearth{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Projects</h1>
+</div>
+
+<div class="card mb-4">
+    <h3 style="margin-bottom: 12px;">New Project</h3>
+    <form hx-post="/projects" hx-target="#project-table" hx-swap="innerHTML"
+          style="display: flex; gap: 12px; align-items: end;">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label for="name">Name</label>
+            <input type="text" name="name" id="name" placeholder="project-name" required>
+        </div>
+        <div class="form-group" style="flex: 2; margin-bottom: 0;">
+            <label for="description">Description</label>
+            <input type="text" name="description" id="description" placeholder="Optional description">
+        </div>
+        <button type="submit" class="btn btn-primary">Create</button>
+    </form>
+</div>
+
+<div id="project-table">
+    {% include "projects/_table.html" %}
+</div>
+{% endblock %}

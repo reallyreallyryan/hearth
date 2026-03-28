@@ -1,0 +1,38 @@
+{% if projects %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for project in projects %}
+        <tr>
+            <td><strong>{{ project.name }}</strong></td>
+            <td class="muted">{{ project.description or "—" }}</td>
+            <td><span class="badge badge-general">{{ project.status }}</span></td>
+            <td class="meta-cell">{{ project.created_at | timeago }}</td>
+            <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm"
+                        hx-get="/projects/{{ project.name }}"
+                        hx-target="#detail-{{ project.name }}"
+                        hx-swap="innerHTML">
+                    View
+                </button>
+            </td>
+        </tr>
+        <tr id="detail-{{ project.name }}">
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <h2>No projects yet</h2>
+    <p>Create your first project above, or via <code>hearth</code> CLI / MCP tools.</p>
+</div>
+{% endif %}

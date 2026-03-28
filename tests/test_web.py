@@ -405,6 +405,138 @@ class TestFilters:
         assert "general" in response.text
 
 
+# ── Step 6: Dashboard Tests ────────────────────────────────────
+
+
+class TestDashboard:
+    def test_dashboard_returns_200(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/dashboard")
+        assert response.status_code == 200
+        assert "Dashboard" in response.text
+
+    def test_dashboard_shows_stats(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/dashboard")
+        assert "Active Memories" in response.text
+        assert "Embeddings" in response.text
+        assert "Active Projects" in response.text
+
+    def test_dashboard_json_mode(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/dashboard", headers={"Accept": "application/json"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "stats" in data
+        assert "version" in data
+        assert "ollama_available" in data
+        assert data["stats"]["total_memories"] > 0
+
+    def test_dashboard_empty_db(self, web_client) -> None:
+        response = web_client.get("/dashboard")
+        assert response.status_code == 200
+        # Should show zero counts, not crash
+        assert "0" in response.text
+
+    def test_dashboard_ollama_status(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/dashboard")
+        assert response.status_code == 200
+        # Mock embedder returns True for check_available
+        assert "Ollama" in response.text
+
+
+# ── Step 7: Project Tests ─────────────────────────────────────
+
+
+class TestProjects:
+    def test_list_projects(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/projects")
+        assert response.status_code == 200
+        assert "project-alpha" in response.text
+        assert "project-beta" in response.text
+
+    def test_list_projects_json(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/projects", headers={"Accept": "application/json"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "projects" in data
+        names = [p["name"] for p in data["projects"]]
+        assert "project-alpha" in names
+
+    def test_create_project(self, seeded_web_client) -> None:
+        response = seeded_web_client.post(
+            "/projects",
+            data={"name": "new-project", "description": "A test project"},
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == "new-project"
+
+    def test_create_duplicate_project(self, seeded_web_client) -> None:
+        response = seeded_web_client.post(
+            "/projects",
+            data={"name": "project-alpha", "description": "duplicate"},
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 409
+
+    def test_get_project_detail(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/projects/project-alpha")
+        assert response.status_code == 200
+        assert "project-alpha" in response.text
+
+    def test_get_project_json(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/projects/project-alpha",
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "project-alpha"
+        assert "memory_count" in data
+
+    def test_get_nonexistent_project(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/projects/nonexistent")
+        assert response.status_code == 404
+
+    def test_update_project_status(self, seeded_web_client) -> None:
+        response = seeded_web_client.put(
+            "/projects/project-alpha",
+            data={"status": "paused"},
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "paused"
+
+    def test_update_project_invalid_status(self, seeded_web_client) -> None:
+        response = seeded_web_client.put(
+            "/projects/project-alpha",
+            data={"status": "invalid"},
+        )
+        assert response.status_code == 422
+
+    def test_archive_project(self, seeded_web_client) -> None:
+        response = seeded_web_client.delete(
+            "/projects/project-beta",
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["archived"] is True
+
+    def test_archive_nonexistent_project(self, seeded_web_client) -> None:
+        response = seeded_web_client.delete("/projects/nonexistent")
+        assert response.status_code == 404
+
+    def test_list_projects_empty(self, web_client) -> None:
+        response = web_client.get("/projects")
+        assert response.status_code == 200
+        assert "No projects yet" in response.text
+
+
 class TestCountMemories:
     def test_count_all(self, seeded_db) -> None:
         count = seeded_db.count_memories()

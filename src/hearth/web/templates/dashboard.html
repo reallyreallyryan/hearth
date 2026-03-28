@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Hearth{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Dashboard</h1>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_memories }}</div>
+        <div class="stat-label">Active Memories</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.archived_memories }}</div>
+        <div class="stat-label">Archived</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.total_embeddings }}</div>
+        <div class="stat-label">
+            Embeddings
+            {% if stats.pending_embeddings > 0 %}
+            <span style="color: var(--warning);">({{ stats.pending_embeddings }} pending)</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ stats.active_projects }}</div>
+        <div class="stat-label">Active Projects</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">
+            <span class="status-dot {% if ollama_available %}online{% else %}offline{% endif %}"></span>
+            {% if ollama_available %}Online{% else %}Offline{% endif %}
+        </div>
+        <div class="stat-label">Ollama ({{ ollama_model }})</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ db_size_mb }} MB</div>
+        <div class="stat-label">Database Size</div>
+    </div>
+</div>
+
+{% if by_category %}
+<div class="card mb-4">
+    <h3 style="margin-bottom: 12px;">By Category</h3>
+    <div class="bar-chart">
+        {% for cat, count in by_category.items() | sort %}
+        <div class="bar-row">
+            <div class="bar-label">{{ cat }}</div>
+            <div class="bar-track">
+                <div class="bar-fill badge-{{ cat }}" style="width: {{ (count / max_cat * 100) | int }}%; background: var(--accent);"></div>
+            </div>
+            <div class="bar-value">{{ count }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if by_project %}
+<div class="card mb-4">
+    <h3 style="margin-bottom: 12px;">By Project</h3>
+    <div class="bar-chart">
+        {% for proj, count in by_project.items() | sort %}
+        <div class="bar-row">
+            <div class="bar-label">{{ proj }}</div>
+            <div class="bar-track">
+                <div class="bar-fill" style="width: {{ (count / max_proj * 100) | int }}%;"></div>
+            </div>
+            <div class="bar-value">{{ count }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3 style="margin-bottom: 12px;">System Info</h3>
+    <table class="data-table">
+        <tr><td class="muted">Hearth Version</td><td class="mono">{{ version }}</td></tr>
+        <tr><td class="muted">Database Path</td><td class="mono">{{ db_path }}</td></tr>
+        <tr><td class="muted">Embedding Model</td><td class="mono">{{ ollama_model }}</td></tr>
+    </table>
+</div>
+{% endblock %}

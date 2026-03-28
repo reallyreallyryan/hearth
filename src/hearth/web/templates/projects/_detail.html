@@ -1,0 +1,54 @@
+<td colspan="5">
+    <div class="memory-detail">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+            <div>
+                <h3>{{ project.name }}</h3>
+                <p class="muted">{{ project.description or "No description" }}</p>
+            </div>
+            <div class="detail-actions" style="margin-top: 0;">
+                <form hx-put="/projects/{{ project.name }}"
+                      hx-target="#detail-{{ project.name }}"
+                      hx-swap="innerHTML"
+                      style="display: flex; gap: 8px; align-items: center;">
+                    <select name="status" class="btn btn-secondary btn-sm" style="padding: 4px 8px;">
+                        {% for s in statuses %}
+                        <option value="{{ s }}" {% if s == project.status %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                </form>
+                <button class="btn btn-danger btn-sm"
+                        hx-delete="/projects/{{ project.name }}"
+                        hx-confirm="Archive project '{{ project.name }}'?"
+                        hx-target="closest tr"
+                        hx-swap="outerHTML">
+                    Archive
+                </button>
+            </div>
+        </div>
+
+        {% if memories %}
+        <h4 style="margin-bottom: 8px;">Memories ({{ memories | length }})</h4>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Content</th>
+                    <th>Category</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for memory in memories %}
+                <tr>
+                    <td class="content-cell">{{ memory.content | truncate_content }}</td>
+                    <td><span class="badge badge-{{ memory.category }}">{{ memory.category }}</span></td>
+                    <td class="meta-cell">{{ memory.created_at | timeago }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="muted">No memories in this project yet.</p>
+        {% endif %}
+    </div>
+</td>
