@@ -301,6 +301,110 @@ class TestMemoryArchive:
         assert response.status_code == 404
 
 
+# ── Step 3: Search Tests ───────────────────────────────────────
+
+
+class TestSearch:
+    def test_search_returns_results(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/memories?q=Python")
+        assert response.status_code == 200
+        assert "Python" in response.text
+
+    def test_search_json_mode(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/memories?q=Python",
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) > 0
+        assert "memory" in data[0]
+        assert "score" in data[0]
+        assert "match_type" in data[0]
+
+    def test_search_no_results(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/memories?q=xyznonexistent999")
+        assert response.status_code == 200
+        assert "No results" in response.text
+
+    def test_search_empty_query_falls_back_to_list(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/memories?q=",
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # Should return list format, not search format
+        assert "memories" in data
+
+    def test_search_with_category_filter(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/memories?q=Python&category=learning",
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        for result in data:
+            assert result["memory"]["category"] == "learning"
+
+    def test_search_htmx_returns_partial(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/memories?q=Python", headers={"HX-Request": "true"}
+        )
+        assert response.status_code == 200
+        assert "<!DOCTYPE html>" not in response.text
+
+    def test_search_results_show_match_type(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/memories?q=SQLite")
+        assert response.status_code == 200
+        # Should show match type badge (fts since no embeddings in test)
+        assert "fts" in response.text or "semantic" in response.text or "hybrid" in response.text
+
+
+# ── Step 4: Filter Tests ──────────────────────────────────────
+
+
+class TestFilters:
+    def test_multiple_filters_compose(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/memories?project=project-alpha&category=learning",
+            headers={"Accept": "application/json"},
+        )
+        data = response.json()
+        for memory in data["memories"]:
+            assert memory["project"] == "project-alpha"
+            assert memory["category"] == "learning"
+
+    def test_filter_plus_search(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/memories?q=Python&project=project-alpha",
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        for result in data:
+            assert result["memory"]["project"] == "project-alpha"
+
+    def test_invalid_filter_returns_empty(self, seeded_web_client) -> None:
+        response = seeded_web_client.get(
+            "/memories?project=nonexistent-project",
+            headers={"Accept": "application/json"},
+        )
+        data = response.json()
+        assert data["memories"] == []
+        assert data["total"] == 0
+
+    def test_filter_dropdowns_populated(self, seeded_web_client) -> None:
+        response = seeded_web_client.get("/memories")
+        assert response.status_code == 200
+        assert "project-alpha" in response.text
+        assert "project-beta" in response.text
+        assert "learning" in response.text
+        assert "general" in response.text
+
+
 class TestCountMemories:
     def test_count_all(self, seeded_db) -> None:
         count = seeded_db.count_memories()
