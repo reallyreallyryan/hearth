@@ -1,0 +1,35 @@
+<td colspan="6">
+    <div class="memory-detail">
+        <div class="detail-content">{{ memory.content }}</div>
+        <div class="detail-meta">
+            <div><dt>ID</dt><dd class="mono">{{ memory.id | truncate_id }}</dd></div>
+            <div><dt>Category</dt><dd><span class="badge badge-{{ memory.category }}">{{ memory.category }}</span></dd></div>
+            <div><dt>Project</dt><dd>{{ memory.project or "—" }}</dd></div>
+            <div><dt>Source</dt><dd><span class="badge badge-source">{{ memory.source }}</span></dd></div>
+            <div><dt>Tags</dt><dd>{{ memory.tags | join(", ") if memory.tags else "—" }}</dd></div>
+            <div><dt>Created</dt><dd>{{ memory.created_at | timeago }}</dd></div>
+            <div><dt>Updated</dt><dd>{{ memory.updated_at | timeago }}</dd></div>
+        </div>
+        <div class="detail-actions">
+            <button class="btn btn-secondary btn-sm"
+                    hx-get="/memories/{{ memory.id }}/edit"
+                    hx-target="#detail-{{ memory.id[:8] }}"
+                    hx-swap="innerHTML">
+                Edit
+            </button>
+            <button class="btn btn-danger btn-sm"
+                    hx-delete="/memories/{{ memory.id }}"
+                    hx-confirm="Archive this memory?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:0.3s">
+                Archive
+            </button>
+            <button class="btn btn-secondary btn-sm"
+                    hx-get="/memories"
+                    hx-target="#memory-table"
+                    hx-include=".filter-bar select, [name='q']">
+                Close
+            </button>
+        </div>
+    </div>
+</td>

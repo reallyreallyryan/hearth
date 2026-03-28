@@ -107,13 +107,15 @@ def create_app(
     templates.env.filters["truncate_id"] = _truncate_id
     app.state.templates = templates
 
-    # Root route — serves the dashboard (or redirects to memories for now)
+    # Register route modules
+    from hearth.web.routes.memories import router as memories_router
+    app.include_router(memories_router)
+
+    # Root route — redirect to memories for now
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
-        return templates.TemplateResponse(request, "base.html", {
-            "version": __version__,
-            "active_page": "home",
-        })
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/memories", status_code=302)
 
     return app
 

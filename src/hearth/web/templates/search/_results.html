@@ -1,0 +1,49 @@
+{% if search_results %}
+<p class="muted mb-4">{{ search_results | length }} result{{ 's' if search_results | length != 1 else '' }} for "{{ query }}"</p>
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Content</th>
+            <th>Score</th>
+            <th>Match</th>
+            <th>Category</th>
+            <th>Project</th>
+            <th>Created</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for result in search_results %}
+        <tr>
+            <td class="content-cell">{{ result.memory.content | truncate_content }}</td>
+            <td class="mono meta-cell">{{ "%.2f" | format(result.score) }}</td>
+            <td><span class="badge badge-{{ result.match_type }}">{{ result.match_type }}</span></td>
+            <td><span class="badge badge-{{ result.memory.category }}">{{ result.memory.category }}</span></td>
+            <td>
+                {% if result.memory.project %}
+                <span class="badge badge-project">{{ result.memory.project }}</span>
+                {% else %}
+                <span class="muted">—</span>
+                {% endif %}
+            </td>
+            <td class="meta-cell">{{ result.memory.created_at | timeago }}</td>
+            <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm"
+                        hx-get="/memories/{{ result.memory.id }}"
+                        hx-target="#detail-{{ result.memory.id[:8] }}"
+                        hx-swap="innerHTML">
+                    View
+                </button>
+            </td>
+        </tr>
+        <tr id="detail-{{ result.memory.id[:8] }}">
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <h2>No results</h2>
+    <p>No memories match "{{ query }}". Try a different search term.</p>
+</div>
+{% endif %}

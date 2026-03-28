@@ -220,15 +220,14 @@ class HearthDB:
         )
         return True
 
-    def list_memories(
+    def _build_memory_filters(
         self,
         project: str | None = None,
         category: str | None = None,
-        limit: int = 10,
-        offset: int = 0,
+        source: str | None = None,
         include_archived: bool = False,
-    ) -> list[dict[str, Any]]:
-        """List memories with optional filters."""
+    ) -> tuple[str, list[Any]]:
+        """Build WHERE clause and params for memory queries."""
         conditions: list[str] = []
         params: list[Any] = []
 
@@ -240,8 +239,27 @@ class HearthDB:
         if category is not None:
             conditions.append("category = ?")
             params.append(category)
+        if source is not None:
+            conditions.append("source = ?")
+            params.append(source)
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        return where, params
+
+    def list_memories(
+        self,
+        project: str | None = None,
+        category: str | None = None,
+        source: str | None = None,
+        limit: int = 10,
+        offset: int = 0,
+        include_archived: bool = False,
+    ) -> list[dict[str, Any]]:
+        """List memories with optional filters."""
+        where, params = self._build_memory_filters(
+            project=project, category=category, source=source,
+            include_archived=include_archived,
+        )
         params.extend([limit, offset])
 
         cursor = self.conn.cursor()
@@ -254,6 +272,25 @@ class HearthDB:
         for row in cursor:
             results.append(self._row_to_dict(cursor, row))
         return results
+
+    def count_memories(
+        self,
+        project: str | None = None,
+        category: str | None = None,
+        source: str | None = None,
+        include_archived: bool = False,
+    ) -> int:
+        """Count memories matching filters. Used for pagination."""
+        where, params = self._build_memory_filters(
+            project=project, category=category, source=source,
+            include_archived=include_archived,
+        )
+        cursor = self.conn.cursor()
+        cursor.execute(
+            f"SELECT COUNT(*) FROM memories {where}",
+            tuple(params),
+        )
+        return next(cursor)[0]
 
     # ── Project CRUD ────────────────────────────────────────────────
 

@@ -1,0 +1,83 @@
+{% if memories %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Content</th>
+            <th>Category</th>
+            <th>Project</th>
+            <th>Source</th>
+            <th>Created</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for memory in memories %}
+        <tr>
+            <td class="content-cell">{{ memory.content | truncate_content }}</td>
+            <td><span class="badge badge-{{ memory.category }}">{{ memory.category }}</span></td>
+            <td>
+                {% if memory.project %}
+                <span class="badge badge-project">{{ memory.project }}</span>
+                {% else %}
+                <span class="muted">—</span>
+                {% endif %}
+            </td>
+            <td><span class="badge badge-source">{{ memory.source }}</span></td>
+            <td class="meta-cell">{{ memory.created_at | timeago }}</td>
+            <td class="actions-cell">
+                <button class="btn btn-secondary btn-sm"
+                        hx-get="/memories/{{ memory.id }}"
+                        hx-target="#detail-{{ memory.id[:8] }}"
+                        hx-swap="innerHTML">
+                    View
+                </button>
+            </td>
+        </tr>
+        <tr id="detail-{{ memory.id[:8] }}">
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if total_pages is defined and total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+    <a href="#"
+       hx-get="/memories?page={{ page - 1 }}{% if project %}&project={{ project }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if source %}&source={{ source }}{% endif %}"
+       hx-target="#memory-table">
+        &laquo; Prev
+    </a>
+    {% else %}
+    <span class="disabled">&laquo; Prev</span>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+        <span class="active">{{ p }}</span>
+        {% else %}
+        <a href="#"
+           hx-get="/memories?page={{ p }}{% if project %}&project={{ project }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if source %}&source={{ source }}{% endif %}"
+           hx-target="#memory-table">
+            {{ p }}
+        </a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+    <a href="#"
+       hx-get="/memories?page={{ page + 1 }}{% if project %}&project={{ project }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if source %}&source={{ source }}{% endif %}"
+       hx-target="#memory-table">
+        Next &raquo;
+    </a>
+    {% else %}
+    <span class="disabled">Next &raquo;</span>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No memories found</h2>
+    <p>Store your first memory with <code>hearth remember "something"</code> or via Claude Desktop / LM Studio.</p>
+</div>
+{% endif %}

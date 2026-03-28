@@ -1,0 +1,46 @@
+<td colspan="6">
+    <div class="memory-detail">
+        <form hx-put="/memories/{{ memory.id }}"
+              hx-target="#detail-{{ memory.id[:8] }}"
+              hx-swap="innerHTML">
+            <div class="form-group">
+                <label for="content">Content</label>
+                <textarea name="content" id="content" rows="4">{{ memory.content }}</textarea>
+            </div>
+            <div class="filter-bar">
+                <div class="form-group" style="flex:1">
+                    <label for="category">Category</label>
+                    <select name="category" id="category">
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if cat == memory.category %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1">
+                    <label for="project">Project</label>
+                    <select name="project" id="project">
+                        <option value="">None</option>
+                        {% for p in projects %}
+                        <option value="{{ p.name }}" {% if p.name == memory.project %}selected{% endif %}>{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="flex:1">
+                    <label for="tags">Tags</label>
+                    <input type="text" name="tags" id="tags"
+                           value="{{ memory.tags | join(', ') if memory.tags else '' }}"
+                           placeholder="tag1, tag2, ...">
+                </div>
+            </div>
+            <div class="detail-actions">
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="button" class="btn btn-secondary btn-sm"
+                        hx-get="/memories/{{ memory.id }}"
+                        hx-target="#detail-{{ memory.id[:8] }}"
+                        hx-swap="innerHTML">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</td>

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Memories — Hearth{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Memories <span class="count-badge">{{ total }}</span></h1>
+</div>
+
+<div class="search-box">
+    <input type="search"
+           name="q"
+           class="search-input"
+           value="{{ query or '' }}"
+           placeholder="Search memories... (press / to focus)"
+           hx-get="/memories"
+           hx-trigger="keyup changed delay:300ms, search"
+           hx-target="#memory-table"
+           hx-include=".filter-bar select">
+</div>
+
+<div class="filter-bar">
+    <select name="project"
+            hx-get="/memories"
+            hx-trigger="change"
+            hx-target="#memory-table"
+            hx-include="[name='q'], [name='category'], [name='source']">
+        <option value="">All Projects</option>
+        {% for p in projects %}
+        <option value="{{ p.name }}" {% if p.name == project %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="category"
+            hx-get="/memories"
+            hx-trigger="change"
+            hx-target="#memory-table"
+            hx-include="[name='q'], [name='project'], [name='source']">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat }}" {% if cat == category %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="source"
+            hx-get="/memories"
+            hx-trigger="change"
+            hx-target="#memory-table"
+            hx-include="[name='q'], [name='project'], [name='category']">
+        <option value="">All Sources</option>
+        <option value="user" {% if source == 'user' %}selected{% endif %}>user</option>
+        <option value="assistant" {% if source == 'assistant' %}selected{% endif %}>assistant</option>
+        <option value="system" {% if source == 'system' %}selected{% endif %}>system</option>
+        <option value="transcription" {% if source == 'transcription' %}selected{% endif %}>transcription</option>
+    </select>
+</div>
+
+<div id="memory-table">
+    {% if query and search_results is defined %}
+        {% include "search/_results.html" %}
+    {% else %}
+        {% include "memories/_table.html" %}
+    {% endif %}
+</div>
+{% endblock %}
