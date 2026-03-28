@@ -396,6 +396,26 @@ class TestFilters:
         assert data["memories"] == []
         assert data["total"] == 0
 
+    def test_empty_filter_strings_dont_break_search(self, seeded_web_client) -> None:
+        """Empty string filter params (from htmx) should be treated as None."""
+        response = seeded_web_client.get(
+            "/memories?q=Python&project=&category=&source=",
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) > 0
+
+    def test_empty_filter_strings_dont_break_list(self, seeded_web_client) -> None:
+        """Empty string filter params should not filter to zero results."""
+        response = seeded_web_client.get(
+            "/memories?project=&category=&source=",
+            headers={"Accept": "application/json"},
+        )
+        data = response.json()
+        assert data["total"] > 0
+
     def test_filter_dropdowns_populated(self, seeded_web_client) -> None:
         response = seeded_web_client.get("/memories")
         assert response.status_code == 200

@@ -34,7 +34,10 @@ async def list_memories(
     templates = _get_templates(request)
     from hearth import __version__
 
-    # Normalize empty query to None
+    # Normalize empty strings to None (htmx sends "" for unselected dropdowns)
+    project = project or None
+    category = category or None
+    source = source or None
     if q is not None and q.strip() == "":
         q = None
 
