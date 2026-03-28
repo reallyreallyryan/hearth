@@ -215,3 +215,126 @@ async def test_hearth_export_csv(ctx) -> None:
 
     result = await hearth_export(format="csv", ctx=ctx)
     assert "content" in result  # CSV header
+
+
+# ── Session & Resonance Tools ──────────────────────────────────────
+
+
+@pytest.fixture
+def session_ctx(session_db, unavailable_embedder, test_config):
+    """Mock MCP context with session data."""
+    return MockContext(session_db, unavailable_embedder, test_config)
+
+
+@pytest.mark.asyncio
+async def test_session_start(fresh_ctx) -> None:
+    from hearth.server import session_start
+
+    result = await session_start(ctx=fresh_ctx)
+    assert "id" in result
+    assert result["memory_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_session_start_with_project(ctx) -> None:
+    from hearth.server import session_start
+
+    result = await session_start(project="project-alpha", ctx=ctx)
+    assert result["project"] == "project-alpha"
+
+
+@pytest.mark.asyncio
+async def test_session_start_invalid_project(fresh_ctx) -> None:
+    from hearth.server import session_start
+
+    result = await session_start(project="nonexistent", ctx=fresh_ctx)
+    assert "error" in result
+
+
+@pytest.mark.asyncio
+async def test_session_close(fresh_ctx) -> None:
+    from hearth.server import session_close, session_start
+
+    session = await session_start(ctx=fresh_ctx)
+    result = await session_close(
+        session_id=session["id"],
+        summary="Test session",
+        exploration_execution=0.8,
+        alignment_tension=0.5,
+        ctx=fresh_ctx,
+    )
+    assert result["ended_at"] is not None
+    assert result["summary"] == "Test session"
+    assert "resonance" in result
+    assert result["resonance"]["exploration_execution"] == 0.8
+
+
+@pytest.mark.asyncio
+async def test_session_close_not_found(fresh_ctx) -> None:
+    from hearth.server import session_close
+
+    result = await session_close(session_id="nonexistent", summary="x", ctx=fresh_ctx)
+    assert "error" in result
+
+
+@pytest.mark.asyncio
+async def test_session_history(session_ctx) -> None:
+    from hearth.server import session_history
+
+    results = await session_history(ctx=session_ctx)
+    assert isinstance(results, list)
+    assert len(results) >= 2
+    assert results[0].get("resonance") is not None
+
+
+@pytest.mark.asyncio
+async def test_session_history_by_project(session_ctx) -> None:
+    from hearth.server import session_history
+
+    results = await session_history(project="project-alpha", ctx=session_ctx)
+    assert all(r["project"] == "project-alpha" for r in results)
+
+
+@pytest.mark.asyncio
+async def test_session_resonance_search(session_ctx) -> None:
+    from hearth.server import session_resonance_search
+
+    results = await session_resonance_search(
+        exploration_execution=0.8,
+        momentum_resistance=0.9,
+        ctx=session_ctx,
+    )
+    assert isinstance(results, list)
+    assert len(results) >= 1
+    assert "session" in results[0]
+    assert "resonance" in results[0]
+    assert "distance" in results[0]
+    assert "memories" in results[0]
+
+
+@pytest.mark.asyncio
+async def test_memory_store_with_session(fresh_ctx) -> None:
+    from hearth.server import memory_store, session_start
+
+    session = await session_start(ctx=fresh_ctx)
+    memory = await memory_store(
+        content="Memory in a session",
+        session_id=session["id"],
+        ctx=fresh_ctx,
+    )
+    assert memory.get("session_id") == session["id"]
+    assert "session_link_error" not in memory
+
+
+@pytest.mark.asyncio
+async def test_memory_store_with_bad_session(fresh_ctx) -> None:
+    from hearth.server import memory_store
+
+    memory = await memory_store(
+        content="Memory with bad session",
+        session_id="nonexistent",
+        ctx=fresh_ctx,
+    )
+    # Memory should still be stored, but with a link error
+    assert "id" in memory
+    assert "session_link_error" in memory

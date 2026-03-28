@@ -868,6 +868,291 @@ a:hover { color: var(--ember-bright); }
 .data-table tbody tr:nth-child(7) { animation-delay: 0.18s; }
 .data-table tbody tr:nth-child(8) { animation-delay: 0.21s; }
 
+/* ── Session Timeline ──────────────────────────────────── */
+
+.session-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.session-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all 0.25s var(--ease);
+    animation: fade-in-up 0.3s var(--ease) both;
+}
+
+.session-card:hover {
+    border-color: var(--border);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 30px var(--ember-glow);
+}
+
+.session-card-main {
+    display: flex;
+    align-items: center;
+    padding: 20px 24px;
+    gap: 24px;
+}
+
+.session-card-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.session-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.session-date {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.session-memory-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.session-summary {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 6px;
+}
+
+.session-time-range {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.session-card-right {
+    flex-shrink: 0;
+}
+
+.radar-empty {
+    width: 180px;
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+}
+
+/* ── Radar Chart ───────────────────────────────────────── */
+
+.radar-container svg {
+    display: block;
+}
+
+.radar-guide-ring {
+    fill: none;
+    stroke: var(--border-subtle);
+    stroke-width: 0.5;
+}
+
+.radar-guide-ring.zero-ring {
+    stroke: var(--border);
+    stroke-width: 1;
+    stroke-dasharray: 3, 3;
+}
+
+.radar-axis-line {
+    stroke: var(--border-subtle);
+    stroke-width: 0.5;
+}
+
+.radar-polygon {
+    fill: rgba(232, 113, 58, 0.12);
+    stroke: var(--ember);
+    stroke-width: 2;
+    stroke-linejoin: round;
+    transition: all 0.3s var(--ease);
+}
+
+.radar-polygon.animate {
+    animation: radar-draw 0.6s var(--ease) forwards;
+}
+
+@keyframes radar-draw {
+    from { opacity: 0; transform: scale(0.3); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.radar-vertex {
+    fill: var(--ember);
+    stroke: var(--bg);
+    stroke-width: 2;
+    r: 3;
+    transition: r 0.15s var(--ease);
+    cursor: pointer;
+}
+
+.radar-vertex:hover {
+    r: 5;
+    fill: var(--ember-bright);
+    filter: drop-shadow(0 0 6px var(--ember));
+}
+
+.radar-label {
+    fill: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+}
+
+.radar-tooltip {
+    position: absolute;
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 200;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: opacity 0.15s var(--ease);
+}
+
+.radar-tooltip.visible {
+    opacity: 1;
+}
+
+/* ── Session Detail (expanded) ─────────────────────────── */
+
+.session-detail {
+    padding: 0 24px 24px;
+    border-top: 1px solid var(--border-subtle);
+    animation: detail-enter 0.25s var(--ease);
+}
+
+.session-detail-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 32px;
+    align-items: start;
+    padding-top: 20px;
+}
+
+.session-detail-chart {
+    display: flex;
+    justify-content: center;
+}
+
+.session-detail-axes {
+    min-width: 0;
+}
+
+.session-detail-axes h4,
+.session-memories-section h4 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    letter-spacing: -0.3px;
+}
+
+.axis-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.axis-labels {
+    width: 200px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.axis-neg { color: var(--info); font-weight: 500; }
+.axis-pos { color: var(--ember); font-weight: 500; }
+
+.axis-bar-track {
+    flex: 1;
+    height: 14px;
+    background: var(--bg);
+    border-radius: 3px;
+    position: relative;
+    border: 1px solid var(--border-subtle);
+    min-width: 100px;
+}
+
+.axis-bar-center {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+}
+
+.axis-bar-fill {
+    position: absolute;
+    top: 1px;
+    bottom: 1px;
+    border-radius: 2px;
+    transition: width 0.4s var(--ease);
+}
+
+.axis-bar-fill.positive {
+    background: linear-gradient(90deg, var(--ember-dim), var(--ember));
+    box-shadow: 0 0 6px var(--ember-glow);
+}
+
+.axis-bar-fill.negative {
+    background: linear-gradient(270deg, var(--info), #4a7a9e);
+    box-shadow: 0 0 6px rgba(91, 159, 212, 0.2);
+}
+
+.axis-value {
+    width: 44px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.session-memories-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* ── Stagger session cards ─────────────────────────────── */
+
+.session-timeline .session-card:nth-child(1) { animation-delay: 0s; }
+.session-timeline .session-card:nth-child(2) { animation-delay: 0.05s; }
+.session-timeline .session-card:nth-child(3) { animation-delay: 0.10s; }
+.session-timeline .session-card:nth-child(4) { animation-delay: 0.15s; }
+.session-timeline .session-card:nth-child(5) { animation-delay: 0.20s; }
+.session-timeline .session-card:nth-child(6) { animation-delay: 0.25s; }
+
 /* ── Responsive ─────────────────────────────────────────── */
 
 @media (max-width: 768px) {
@@ -915,6 +1200,10 @@ a:hover { color: var(--ember-bright); }
 
     .page-header h1 { font-size: 22px; }
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
+
+    .session-card-main { flex-direction: column; }
+    .session-detail-grid { grid-template-columns: 1fr; }
+    .axis-labels { width: 140px; }
 }
 
 /* ── Scrollbar ──────────────────────────────────────────── */

@@ -73,7 +73,7 @@ hearth --version
 You should see:
 
 ```
-hearth, version 0.1.1
+hearth, version 0.2.0
 ```
 
 **If you see `command not found`:** Try `pip3 install -e ".[transcribe,ui]"` instead, then use `hearth --version` again.
@@ -149,7 +149,7 @@ hearth status
 You should see:
 
 ```
-Hearth v0.1.1
+Hearth v0.2.0
 Database: /Users/you/hearth/hearth.db
 
 Memories:   1 active, 0 archived
@@ -197,7 +197,8 @@ hearth ui --open
 This starts a local dashboard at `http://localhost:8274` and opens it in your browser. You'll see:
 
 - **Memories page** — browse, search, filter, edit, and archive your memories
-- **Dashboard** — stats cards, memory breakdowns by category/project, Ollama status
+- **Sessions page** — view your session timeline with resonance radar charts showing the emotional texture of each conversation
+- **Dashboard** — stats cards, memory/session counts, Ollama status
 - **Projects** — create and manage projects to organize your memories
 - **Export** — download all memories as JSON or CSV
 
@@ -274,7 +275,7 @@ You need to fully quit and reopen Claude Desktop:
 
 ### 5e. Verify it worked
 
-When Claude Desktop opens, got to Settings > Connectors > hearth. Click it — you should see a list of Hearth tools:
+When Claude Desktop opens, go to Settings > Connectors > hearth. Click it — you should see a list of Hearth tools:
 
 - memory_store
 - memory_search
@@ -286,6 +287,10 @@ When Claude Desktop opens, got to Settings > Connectors > hearth. Click it — y
 - project_get
 - project_update
 - project_archive
+- session_start
+- session_close
+- session_resonance_search
+- session_history
 - hearth_status
 - hearth_export
 
@@ -314,6 +319,18 @@ Claude should call `memory_search` and tell you "Rust."
 > Create a Hearth project called "beacon" with description "A distributed messaging system I'm building in Rust"
 
 Claude should call `project_create`.
+
+**Start a session (v0.2.0):**
+
+> Start a new Hearth session for the beacon project.
+
+Claude should call `session_start` and return a session ID.
+
+**Close with resonance (v0.2.0):**
+
+> Close this session. We were exploring new territory, had great momentum, and I was leading the direction.
+
+Claude should call `session_close` with a summary and resonance axis values. You can view the resulting radar chart in `hearth ui`.
 
 ---
 
@@ -463,7 +480,7 @@ Everything is in one folder: `~/hearth/`
 
 ```
 ~/hearth/
-  hearth.db       <- All your memories (this is the important file)
+  hearth.db       <- All your memories and sessions (this is the important file)
   config.yaml     <- Your settings
 ```
 

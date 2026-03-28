@@ -12,11 +12,12 @@ from typing import Any
 import apsw
 import sqlite_vec
 
-from hearth.config import VALID_CATEGORIES, VALID_PROJECT_STATUSES, VALID_SOURCES
+from hearth.config import RESONANCE_AXES, VALID_CATEGORIES, VALID_PROJECT_STATUSES, VALID_SOURCES
 
 logger = logging.getLogger("hearth.db")
 
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
+RESONANCE_SCHEMA_PATH = Path(__file__).parent / "resonance_schema.sql"
 
 
 def _now() -> str:
@@ -51,7 +52,7 @@ class HearthDB:
         return conn
 
     def init_db(self) -> None:
-        """Execute schema.sql and create vec0 table if needed."""
+        """Execute schema.sql, resonance_schema.sql, and create vec0 tables if needed."""
         schema_sql = SCHEMA_PATH.read_text()
         cursor = self.conn.cursor()
         cursor.execute(schema_sql)
@@ -67,6 +68,24 @@ class HearthDB:
                 "CREATE VIRTUAL TABLE memory_embeddings USING vec0("
                 "memory_id TEXT PRIMARY KEY, "
                 "embedding float[768]"
+                ")"
+            )
+
+        # Load resonance schema (sessions, session_resonance, session_memories)
+        resonance_sql = RESONANCE_SCHEMA_PATH.read_text()
+        cursor.execute(resonance_sql)
+
+        # Create resonance_embeddings vec0 table if needed
+        existing_res = list(
+            self.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='resonance_embeddings'"
+            )
+        )
+        if not existing_res:
+            self.conn.execute(
+                "CREATE VIRTUAL TABLE resonance_embeddings USING vec0("
+                "session_id TEXT PRIMARY KEY, "
+                "resonance float[11]"
                 ")"
             )
 
@@ -113,6 +132,30 @@ class HearthDB:
             raise ValueError(
                 f"Invalid status '{status}'. Must be one of: {', '.join(sorted(VALID_PROJECT_STATUSES))}"
             )
+
+    def _validate_resonance_axes(self, axes: dict[str, float]) -> None:
+        missing = set(RESONANCE_AXES) - set(axes.keys())
+        if missing:
+            raise ValueError(f"Missing resonance axes: {', '.join(sorted(missing))}")
+        extra = set(axes.keys()) - set(RESONANCE_AXES)
+        if extra:
+            raise ValueError(f"Unknown resonance axes: {', '.join(sorted(extra))}")
+        for axis, value in axes.items():
+            if not isinstance(value, (int, float)):
+                raise ValueError(
+                    f"Resonance axis '{axis}' must be a number, got {type(value).__name__}"
+                )
+            if value < -1.0 or value > 1.0:
+                raise ValueError(
+                    f"Resonance axis '{axis}' must be in [-1, 1], got {value}"
+                )
+
+    def _validate_session_exists(self, session_id: str) -> None:
+        row = list(self.conn.execute(
+            "SELECT 1 FROM sessions WHERE id = ?", (session_id,)
+        ))
+        if not row:
+            raise ValueError(f"Session '{session_id}' does not exist")
 
     # ── Memory CRUD ─────────────────────────────────────────────────
 
@@ -391,6 +434,172 @@ class HearthDB:
         """Archive a project. Returns True if found."""
         result = self.update_project(name, status="archived")
         return result is not None
+
+    # ── Session CRUD ───────────────────────────────────────────────
+
+    def create_session(self, project: str | None = None) -> dict[str, Any]:
+        """Start a new session. Returns the created session as a dict."""
+        if project is not None:
+            self._validate_project_exists(project)
+
+        session_id = _new_id()
+        now = _now()
+        self.conn.execute(
+            "INSERT INTO sessions (id, project, started_at) VALUES (?, ?, ?)",
+            (session_id, project, now),
+        )
+        return {
+            "id": session_id,
+            "project": project,
+            "started_at": now,
+            "ended_at": None,
+            "summary": None,
+            "memory_count": 0,
+        }
+
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
+        """Get a single session by ID."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM sessions WHERE id = ?", (session_id,))
+        row = next(cursor, None)
+        if row is None:
+            return None
+        return self._row_to_dict(cursor, row)
+
+    def close_session(
+        self,
+        session_id: str,
+        summary: str | None = None,
+        ended_at: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Close a session with an optional summary. Returns updated session or None."""
+        existing = self.get_session(session_id)
+        if existing is None:
+            return None
+        if ended_at is None:
+            ended_at = _now()
+        self.conn.execute(
+            "UPDATE sessions SET ended_at = ?, summary = ? WHERE id = ?",
+            (ended_at, summary, session_id),
+        )
+        return self.get_session(session_id)
+
+    def list_sessions(
+        self,
+        project: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """List sessions, optionally filtered by project. Newest first."""
+        conditions: list[str] = []
+        params: list[Any] = []
+        if project is not None:
+            conditions.append("project = ?")
+            params.append(project)
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.extend([limit, offset])
+        cursor = self.conn.cursor()
+        cursor.execute(
+            f"SELECT * FROM sessions {where} ORDER BY started_at DESC LIMIT ? OFFSET ?",
+            tuple(params),
+        )
+        return [self._row_to_dict(cursor, row) for row in cursor]
+
+    # ── Resonance Operations ───────────────────────────────────────
+
+    def store_resonance(self, session_id: str, axes: dict[str, float]) -> dict[str, Any]:
+        """Store the 11-axis resonance for a session and its vec0 embedding."""
+        import struct
+
+        self._validate_session_exists(session_id)
+        self._validate_resonance_axes(axes)
+
+        resonance_id = _new_id()
+        now = _now()
+        columns = ", ".join(RESONANCE_AXES)
+        placeholders = ", ".join(["?"] * len(RESONANCE_AXES))
+        values = [float(axes[axis]) for axis in RESONANCE_AXES]
+
+        self.conn.execute(
+            f"INSERT INTO session_resonance (id, session_id, {columns}, created_at) "
+            f"VALUES (?, ?, {placeholders}, ?)",
+            (resonance_id, session_id, *values, now),
+        )
+
+        # Store vec0 embedding (11 floats in RESONANCE_AXES order)
+        blob = struct.pack("11f", *values)
+        self.conn.execute(
+            "INSERT INTO resonance_embeddings (session_id, resonance) VALUES (?, ?)",
+            (session_id, blob),
+        )
+
+        result: dict[str, Any] = {"id": resonance_id, "session_id": session_id, "created_at": now}
+        result.update(axes)
+        return result
+
+    def get_resonance(self, session_id: str) -> dict[str, Any] | None:
+        """Get resonance data for a session."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT * FROM session_resonance WHERE session_id = ?", (session_id,)
+        )
+        row = next(cursor, None)
+        if row is None:
+            return None
+        return self._row_to_dict(cursor, row)
+
+    def search_resonance(
+        self, axes: dict[str, float], limit: int = 5
+    ) -> list[tuple[str, float]]:
+        """Vector similarity search in resonance space. Returns (session_id, distance) pairs."""
+        import struct
+
+        self._validate_resonance_axes(axes)
+        values = [float(axes[axis]) for axis in RESONANCE_AXES]
+        blob = struct.pack("11f", *values)
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT session_id, distance FROM resonance_embeddings "
+            "WHERE resonance MATCH ? AND k = ?",
+            (blob, limit),
+        )
+        return [(row[0], row[1]) for row in cursor]
+
+    # ── Session-Memory Links ───────────────────────────────────────
+
+    def link_memory_to_session(
+        self, session_id: str, memory_id: str, action: str = "created"
+    ) -> None:
+        """Link a memory to a session. No-op if already linked."""
+        self._validate_session_exists(session_id)
+        if self.get_memory(memory_id) is None:
+            raise ValueError(f"Memory '{memory_id}' does not exist")
+
+        try:
+            self.conn.execute(
+                "INSERT INTO session_memories (session_id, memory_id, action) "
+                "VALUES (?, ?, ?)",
+                (session_id, memory_id, action),
+            )
+            self.conn.execute(
+                "UPDATE sessions SET memory_count = memory_count + 1 WHERE id = ?",
+                (session_id,),
+            )
+        except apsw.ConstraintError:
+            pass  # Already linked, no-op
+
+    def get_session_memories(self, session_id: str) -> list[dict[str, Any]]:
+        """Return all memories linked to a session, with their action type."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT m.*, sm.action "
+            "FROM session_memories sm "
+            "JOIN memories m ON sm.memory_id = m.id "
+            "WHERE sm.session_id = ? "
+            "ORDER BY m.created_at ASC",
+            (session_id,),
+        )
+        return [self._row_to_dict(cursor, row) for row in cursor]
 
     # ── Embedding Operations ────────────────────────────────────────
 

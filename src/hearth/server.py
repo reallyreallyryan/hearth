@@ -86,7 +86,8 @@ mcp = FastMCP(
     name="memory_store",
     description=(
         "Store a new memory. Categories: general, learning, pattern, reference, decision. "
-        "Set project to scope the memory, or leave empty for global."
+        "Set project to scope the memory, or leave empty for global. "
+        "Pass session_id to link the memory to an active session."
     ),
 )
 async def memory_store(
@@ -95,6 +96,7 @@ async def memory_store(
     project: str | None = None,
     tags: list[str] | None = None,
     source: str = "assistant",
+    session_id: str | None = None,
     ctx: Context = None,
 ) -> dict[str, Any]:
     db = _get_db(ctx)
@@ -111,6 +113,13 @@ async def memory_store(
         memory["has_embedding"] = True
     else:
         memory["has_embedding"] = False
+
+    if session_id is not None:
+        try:
+            db.link_memory_to_session(session_id, memory["id"], "created")
+            memory["session_id"] = session_id
+        except ValueError as e:
+            memory["session_link_error"] = str(e)
 
     return memory
 
@@ -314,6 +323,155 @@ async def hearth_export(format: str = "json", ctx: Context = None) -> str:
         return db.export_memories(format=format)
     except ValueError as e:
         return str(e)
+
+
+# ── Session & Resonance Tools ──────────────────────────────────────
+
+
+@mcp.tool(
+    name="session_start",
+    description=(
+        "Start a new session. Optionally scope to a project. "
+        "Returns the session ID to use with session_close and memory_store."
+    ),
+)
+async def session_start(
+    project: str | None = None,
+    ctx: Context = None,
+) -> dict[str, Any]:
+    db = _get_db(ctx)
+    try:
+        return db.create_session(project=project)
+    except ValueError as e:
+        return {"error": str(e)}
+
+
+@mcp.tool(
+    name="session_close",
+    description=(
+        "Close a session with a summary and 11-axis resonance assessment. "
+        "Each axis is a float from -1.0 to 1.0. Call at the end of a conversation."
+    ),
+)
+async def session_close(
+    session_id: str,
+    summary: str | None = None,
+    exploration_execution: float = 0.0,
+    alignment_tension: float = 0.0,
+    depth_breadth: float = 0.0,
+    momentum_resistance: float = 0.0,
+    novelty_familiarity: float = 0.0,
+    confidence_uncertainty: float = 0.0,
+    autonomy_direction: float = 0.0,
+    energy_entropy: float = 0.0,
+    vulnerability_performance: float = 0.0,
+    stakes_casual: float = 0.0,
+    mutual_transactional: float = 0.0,
+    ctx: Context = None,
+) -> dict[str, Any]:
+    db = _get_db(ctx)
+
+    session = db.close_session(session_id, summary=summary)
+    if session is None:
+        return {"error": f"Session '{session_id}' not found"}
+
+    axes = {
+        "exploration_execution": exploration_execution,
+        "alignment_tension": alignment_tension,
+        "depth_breadth": depth_breadth,
+        "momentum_resistance": momentum_resistance,
+        "novelty_familiarity": novelty_familiarity,
+        "confidence_uncertainty": confidence_uncertainty,
+        "autonomy_direction": autonomy_direction,
+        "energy_entropy": energy_entropy,
+        "vulnerability_performance": vulnerability_performance,
+        "stakes_casual": stakes_casual,
+        "mutual_transactional": mutual_transactional,
+    }
+
+    try:
+        resonance = db.store_resonance(session_id, axes)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    session["resonance"] = resonance
+    return session
+
+
+@mcp.tool(
+    name="session_resonance_search",
+    description=(
+        "Find sessions with similar resonance signatures. "
+        "Returns sessions ranked by proximity in resonance space, "
+        "including their summaries and linked memories."
+    ),
+)
+async def session_resonance_search(
+    exploration_execution: float = 0.0,
+    alignment_tension: float = 0.0,
+    depth_breadth: float = 0.0,
+    momentum_resistance: float = 0.0,
+    novelty_familiarity: float = 0.0,
+    confidence_uncertainty: float = 0.0,
+    autonomy_direction: float = 0.0,
+    energy_entropy: float = 0.0,
+    vulnerability_performance: float = 0.0,
+    stakes_casual: float = 0.0,
+    mutual_transactional: float = 0.0,
+    limit: int = 5,
+    ctx: Context = None,
+) -> list[dict[str, Any]]:
+    db = _get_db(ctx)
+
+    axes = {
+        "exploration_execution": exploration_execution,
+        "alignment_tension": alignment_tension,
+        "depth_breadth": depth_breadth,
+        "momentum_resistance": momentum_resistance,
+        "novelty_familiarity": novelty_familiarity,
+        "confidence_uncertainty": confidence_uncertainty,
+        "autonomy_direction": autonomy_direction,
+        "energy_entropy": energy_entropy,
+        "vulnerability_performance": vulnerability_performance,
+        "stakes_casual": stakes_casual,
+        "mutual_transactional": mutual_transactional,
+    }
+
+    try:
+        results = db.search_resonance(axes, limit=limit)
+    except ValueError as e:
+        return [{"error": str(e)}]
+
+    enriched = []
+    for session_id, distance in results:
+        session = db.get_session(session_id)
+        if session is None:
+            continue
+        resonance = db.get_resonance(session_id)
+        memories = db.get_session_memories(session_id)
+        enriched.append({
+            "session": session,
+            "resonance": resonance,
+            "distance": distance,
+            "memories": memories,
+        })
+    return enriched
+
+
+@mcp.tool(
+    name="session_history",
+    description="List recent sessions with their resonance data and summaries. Optionally filter by project.",
+)
+async def session_history(
+    project: str | None = None,
+    limit: int = 10,
+    ctx: Context = None,
+) -> list[dict[str, Any]]:
+    db = _get_db(ctx)
+    sessions = db.list_sessions(project=project, limit=limit)
+    for session in sessions:
+        session["resonance"] = db.get_resonance(session["id"])
+    return sessions
 
 
 def run_server() -> None:

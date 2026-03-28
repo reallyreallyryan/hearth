@@ -29,6 +29,10 @@
         <div class="stat-label">Active Projects</div>
     </div>
     <div class="stat-card">
+        <div class="stat-value">{{ stats.total_sessions | default(0) }}</div>
+        <div class="stat-label"><a href="/sessions" style="color: inherit;">Sessions</a></div>
+    </div>
+    <div class="stat-card">
         <div class="stat-value">
             <span class="status-dot {% if ollama_available %}online{% else %}offline{% endif %}"></span>
             {% if ollama_available %}Online{% else %}Offline{% endif %}

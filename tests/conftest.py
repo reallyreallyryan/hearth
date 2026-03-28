@@ -47,6 +47,46 @@ def seeded_db(tmp_db) -> HearthDB:
 
 
 @pytest.fixture
+def session_db(seeded_db) -> HearthDB:
+    """Database pre-loaded with sessions and resonance data."""
+    from hearth.config import RESONANCE_AXES
+
+    # Session 1: productive coding session on project-alpha
+    s1 = seeded_db.create_session(project="project-alpha")
+    seeded_db.close_session(s1["id"], summary="Productive coding session")
+    axes1 = {axis: 0.0 for axis in RESONANCE_AXES}
+    axes1.update({
+        "exploration_execution": 0.8,
+        "alignment_tension": 0.7,
+        "momentum_resistance": 0.9,
+        "confidence_uncertainty": 0.6,
+        "energy_entropy": 0.5,
+        "mutual_transactional": 0.8,
+    })
+    seeded_db.store_resonance(s1["id"], axes1)
+
+    # Session 2: debugging frustration on project-beta
+    s2 = seeded_db.create_session(project="project-beta")
+    seeded_db.close_session(s2["id"], summary="Debugging frustration")
+    axes2 = {axis: 0.0 for axis in RESONANCE_AXES}
+    axes2.update({
+        "exploration_execution": -0.5,
+        "alignment_tension": -0.3,
+        "momentum_resistance": -0.7,
+        "confidence_uncertainty": -0.4,
+        "stakes_casual": 0.6,
+    })
+    seeded_db.store_resonance(s2["id"], axes2)
+
+    # Link some memories to session 1
+    memories = seeded_db.list_memories(project="project-alpha")
+    for mem in memories:
+        seeded_db.link_memory_to_session(s1["id"], mem["id"], "created")
+
+    return seeded_db
+
+
+@pytest.fixture
 def test_config(tmp_path) -> HearthConfig:
     """Config pointing to temporary directory."""
     return HearthConfig(db_path=tmp_path / "test_hearth.db")

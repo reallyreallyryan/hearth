@@ -25,6 +25,10 @@ async def dashboard(
     stats = db.get_stats()
     ollama_available = await embedder.check_available()
 
+    # Session count
+    sessions = db.list_sessions(limit=1000)
+    stats["total_sessions"] = len(sessions)
+
     # Calculate max for bar chart scaling
     by_category = stats.get("by_category", {})
     by_project = stats.get("by_project", {})

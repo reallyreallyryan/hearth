@@ -583,6 +583,78 @@ class TestExport:
         assert response.status_code == 200
 
 
+@pytest.fixture
+def session_web_client(session_db, mock_embedder):
+    """Create a TestClient with session/resonance data."""
+    app = create_app(db=session_db, embedder=mock_embedder)
+    with TestClient(app) as client:
+        yield client
+
+
+class TestSessions:
+    def test_sessions_list_returns_200(self, session_web_client) -> None:
+        response = session_web_client.get("/sessions")
+        assert response.status_code == 200
+        assert "Sessions" in response.text
+
+    def test_sessions_list_shows_summaries(self, session_web_client) -> None:
+        response = session_web_client.get("/sessions")
+        assert "Productive coding session" in response.text
+
+    def test_sessions_list_shows_radar_container(self, session_web_client) -> None:
+        response = session_web_client.get("/sessions")
+        assert "radar-container" in response.text
+
+    def test_sessions_list_json(self, session_web_client) -> None:
+        response = session_web_client.get(
+            "/sessions", headers={"accept": "application/json"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "sessions" in data
+        assert len(data["sessions"]) >= 2
+
+    def test_sessions_list_filter_by_project(self, session_web_client) -> None:
+        response = session_web_client.get("/sessions?project=project-alpha")
+        assert response.status_code == 200
+        assert "project-alpha" in response.text
+
+    def test_sessions_list_empty(self, web_client) -> None:
+        response = web_client.get("/sessions")
+        assert response.status_code == 200
+        assert "No sessions yet" in response.text
+
+    def test_session_detail_returns_200(self, session_web_client, session_db) -> None:
+        sessions = session_db.list_sessions(limit=1)
+        response = session_web_client.get(f"/sessions/{sessions[0]['id']}")
+        assert response.status_code == 200
+
+    def test_session_detail_json(self, session_web_client, session_db) -> None:
+        sessions = session_db.list_sessions(limit=1)
+        response = session_web_client.get(
+            f"/sessions/{sessions[0]['id']}",
+            headers={"accept": "application/json"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "session" in data
+        assert "resonance" in data
+        assert "memories" in data
+
+    def test_session_detail_not_found(self, web_client) -> None:
+        response = web_client.get("/sessions/nonexistent")
+        assert response.status_code == 404
+
+    def test_sidebar_has_sessions_link(self, web_client) -> None:
+        response = web_client.get("/sessions")
+        assert 'href="/sessions"' in response.text
+
+    def test_dashboard_shows_session_count(self, session_web_client) -> None:
+        response = session_web_client.get("/dashboard")
+        assert response.status_code == 200
+        assert "Sessions" in response.text
+
+
 class TestCountMemories:
     def test_count_all(self, seeded_db) -> None:
         count = seeded_db.count_memories()

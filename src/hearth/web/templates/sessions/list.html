@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Sessions — Hearth{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Sessions <span class="count-badge">{{ sessions | length }}</span></h1>
+</div>
+
+{% if projects %}
+<div class="filter-bar">
+    <select onchange="window.location.href='/sessions' + (this.value ? '?project=' + this.value : '')">
+        <option value="">All projects</option>
+        {% for p in projects %}
+        <option value="{{ p.name }}" {% if project == p.name %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+
+{% if sessions %}
+<div class="session-timeline">
+    {% for session in sessions %}
+    <div class="session-card" id="session-{{ session.id[:8] }}">
+        <div class="session-card-main"
+             hx-get="/sessions/{{ session.id }}"
+             hx-target="#detail-{{ session.id[:8] }}"
+             hx-swap="innerHTML"
+             hx-trigger="click"
+             hx-select=".session-detail-inner"
+             style="cursor: pointer;">
+            <div class="session-card-left">
+                <div class="session-card-header">
+                    <span class="session-date">{{ session.started_at | timeago }}</span>
+                    {% if session.project %}
+                    <span class="badge badge-project">{{ session.project }}</span>
+                    {% endif %}
+                    {% if session.memory_count > 0 %}
+                    <span class="session-memory-count">{{ session.memory_count }} memories</span>
+                    {% endif %}
+                </div>
+                {% if session.summary %}
+                <p class="session-summary">{{ session.summary }}</p>
+                {% else %}
+                <p class="session-summary muted">No summary</p>
+                {% endif %}
+                {% if session.ended_at %}
+                <div class="session-time-range mono muted">
+                    {{ session.started_at[:16] }} &mdash; {{ session.ended_at[:16] }}
+                </div>
+                {% else %}
+                <div class="session-time-range">
+                    <span class="status-dot online"></span> Active
+                </div>
+                {% endif %}
+            </div>
+            <div class="session-card-right">
+                {% if session.resonance %}
+                <div class="radar-container" data-resonance='{{ session.resonance | tojson }}' data-size="180"></div>
+                {% else %}
+                <div class="radar-empty">
+                    <span class="muted">No resonance</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="session-detail-expand" id="detail-{{ session.id[:8] }}"></div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No sessions yet</h2>
+    <p>
+        Start a conversation and close it with <code>session_close</code> to see your first resonance signature here.
+    </p>
+    <div class="radar-container radar-preview" data-resonance='{}' data-size="200" style="margin: 40px auto; opacity: 0.15;"></div>
+</div>
+{% endif %}
+{% endblock %}

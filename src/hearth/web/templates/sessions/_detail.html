@@ -1,0 +1,72 @@
+<div class="session-detail-inner">
+    <div class="session-detail">
+        {% if resonance %}
+        <div class="session-detail-grid">
+            <div class="session-detail-chart">
+                <div class="radar-container" data-resonance='{{ resonance | tojson }}' data-size="280"></div>
+            </div>
+            <div class="session-detail-axes">
+                <h4>Resonance Axes</h4>
+                {% set axis_labels = {
+                    "exploration_execution": ["Execution", "Exploration"],
+                    "alignment_tension": ["Tension", "Alignment"],
+                    "depth_breadth": ["Breadth", "Depth"],
+                    "momentum_resistance": ["Resistance", "Momentum"],
+                    "novelty_familiarity": ["Familiar", "Novel"],
+                    "confidence_uncertainty": ["Uncertain", "Confident"],
+                    "autonomy_direction": ["Directed", "Autonomous"],
+                    "energy_entropy": ["Entropy", "Energy"],
+                    "vulnerability_performance": ["Performance", "Vulnerability"],
+                    "stakes_casual": ["Casual", "High Stakes"],
+                    "mutual_transactional": ["Transactional", "Mutual"]
+                } %}
+                {% for axis in resonance_axes %}
+                {% set val = resonance[axis] | default(0) %}
+                {% set labels = axis_labels[axis] %}
+                <div class="axis-row">
+                    <div class="axis-labels">
+                        <span class="axis-neg">{{ labels[0] }}</span>
+                        <span class="axis-pos">{{ labels[1] }}</span>
+                    </div>
+                    <div class="axis-bar-track">
+                        <div class="axis-bar-center"></div>
+                        <div class="axis-bar-fill {% if val >= 0 %}positive{% else %}negative{% endif %}"
+                             style="{% if val >= 0 %}left: 50%; width: {{ (val * 50) | abs }}%;{% else %}right: 50%; width: {{ (val * 50) | abs }}%;{% endif %}">
+                        </div>
+                    </div>
+                    <span class="axis-value mono">{{ "%.2f" | format(val) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if memories %}
+        <div class="session-memories-section">
+            <h4>Linked Memories <span class="count-badge">{{ memories | length }}</span></h4>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Content</th>
+                        <th>Category</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for mem in memories %}
+                    <tr>
+                        <td class="content-cell">{{ mem.content | truncate_content }}</td>
+                        <td><span class="badge badge-{{ mem.category }}">{{ mem.category }}</span></td>
+                        <td><span class="badge badge-source">{{ mem.action }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% elif not resonance %}
+        <div class="empty-state" style="padding: 40px 20px;">
+            <p class="muted">This session has no resonance data or linked memories.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

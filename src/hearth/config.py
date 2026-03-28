@@ -15,6 +15,20 @@ VALID_CATEGORIES = {"general", "learning", "pattern", "reference", "decision"}
 VALID_SOURCES = {"user", "assistant", "system", "transcription"}
 VALID_PROJECT_STATUSES = {"active", "paused", "completed", "archived"}
 
+RESONANCE_AXES = (
+    "exploration_execution",
+    "alignment_tension",
+    "depth_breadth",
+    "momentum_resistance",
+    "novelty_familiarity",
+    "confidence_uncertainty",
+    "autonomy_direction",
+    "energy_entropy",
+    "vulnerability_performance",
+    "stakes_casual",
+    "mutual_transactional",
+)
+
 
 @dataclass
 class EmbeddingConfig:
@@ -40,7 +54,7 @@ class TranscriptionConfig:
 
 @dataclass
 class HearthConfig:
-    version: str = "0.1.1"
+    version: str = "0.2.0"
     db_path: Path = field(default_factory=lambda: DEFAULT_DB_PATH)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
@@ -112,7 +126,7 @@ def save_default_config(config_path: Path) -> None:
     """Write default config.yaml to disk."""
     data = {
         "hearth": {
-            "version": "0.1.1",
+            "version": "0.2.0",
             "db_path": "./hearth.db",
         },
         "models": {
