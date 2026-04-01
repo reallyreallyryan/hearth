@@ -150,15 +150,33 @@ The web dashboard includes a Sessions page with radar chart visualizations of ea
 
 ---
 
+## Threads & Tension
+
+Resonance captures *how* a session felt. Threads and tension capture *where the thinking was going* and *what's unresolved*.
+
+**Threads** are tracked lines of inquiry that span sessions. Not chat logs — directional arcs. A thread like "what would the AI build if it could build anything?" can emerge in one session, produce a major design decision, and get picked back up weeks later. Each thread carries a trajectory — a running note on where the thinking is heading — and links to every session that touched it.
+
+**Tensions** are unresolved questions that carry weight. Not task items — conceptual open loops. "Is what the AI experiences actually motivation or just a functional analog?" is a tension. Neither side resolved it. That productive discomfort is *valuable*, and most systems lose it. Tensions carry perspectives — each participant can register their view, and the tension's status auto-transitions from "open" to "evolving" as perspectives accumulate.
+
+### How Threads & Tension Work
+
+1. **Session start:** The AI calls `thread_list` and `tension_list` to see what lines of inquiry are open and what's unresolved
+2. **During:** The conversation picks up threads and engages with tensions naturally
+3. **Session close:** The AI calls `session_reflect` to create/update threads, add perspectives to tensions, and resolve tensions — all in a single batch call alongside `session_close`
+
+Together with sessions and resonance, threads and tensions reconstruct not just the state of a collaboration but its **trajectory and unfinished business**.
+
+### Viewing Threads & Tensions
+
+```bash
+hearth ui --open
+```
+
+The web dashboard includes a Threads page where each thread renders as an expandable card showing its status, trajectory, and linked session/tension counts. Click any thread to see the full session timeline with trajectory notes and all linked tensions with their perspectives. Free-floating tensions (not attached to any thread) appear in their own section. Filter by project or status.
+
+---
+
 ## What's Coming
-
-### Threads & Tension
-
-Resonance captures *how* a session felt. Threads and tension capture *where the thinking was going*.
-
-**Threads** are tracked lines of inquiry that span sessions. Not chat logs — directional arcs. A thread like "what would the AI build if it could build anything?" can emerge in one session, produce a major design decision, and get picked back up weeks later.
-
-**Tension** tracks unresolved questions that carry weight. Not task items — conceptual open loops. "Is what the AI experiences actually motivation or just a functional analog?" is a tension. Neither side resolved it. That productive discomfort is *valuable*, and most systems lose it.
 
 ### Drift Detection
 
@@ -196,7 +214,7 @@ Options for `ingest`: `-m model`, `-p project`, `-c category`, `-t "tag1,tag2"`
 
 ## MCP Tools
 
-When connected, Hearth exposes 16 tools to any MCP client:
+When connected, Hearth exposes 19 tools to any MCP client:
 
 ### Memory Tools
 
@@ -227,6 +245,14 @@ When connected, Hearth exposes 16 tools to any MCP client:
 | `session_resonance_search` | Find past sessions with similar emotional texture |
 | `session_history` | List recent sessions with their resonance data |
 
+### Thread & Tension Tools
+
+| Tool | What it does |
+|------|-------------|
+| `thread_list` | List active threads with session/tension counts, filter by project or status |
+| `tension_list` | List unresolved questions, filter by thread, project, or status |
+| `session_reflect` | Batch create/update threads and tensions at session close |
+
 ### System Tools
 
 | Tool | What it does |
@@ -240,11 +266,11 @@ When connected, Hearth exposes 16 tools to any MCP client:
 
 Hearth has three layers:
 
-**The Brain** — a single SQLite database (`hearth.db`) with structured memory storage, full-text search via FTS5, vector similarity search via sqlite-vec (768 dimensions for memories, 11 dimensions for resonance), and session/resonance tables for relationship context.
+**The Brain** — a single SQLite database (`hearth.db`) with structured memory storage, full-text search via FTS5, vector similarity search via sqlite-vec (768 dimensions for memories, 11 dimensions for resonance), session/resonance tables for relationship context, and threads/tensions for tracking lines of inquiry and unresolved questions across sessions.
 
-**The Spine** — a Python MCP server that exposes the Brain to any MCP-compatible client. It runs over stdio and handles all read/write operations including memory, project, session, and resonance tools.
+**The Spine** — a Python MCP server that exposes the Brain to any MCP-compatible client. It runs over stdio and handles all read/write operations including memory, project, session, resonance, thread, and tension tools.
 
-**The Shell** — CLI tools and a local web dashboard (`hearth ui`) built with FastAPI, Jinja2, and htmx. Browse memories, view session timelines with resonance radar charts, manage projects. Dark mode, no build step, no JavaScript framework.
+**The Shell** — CLI tools and a local web dashboard (`hearth ui`) built with FastAPI, Jinja2, and htmx. Browse memories, view session timelines with resonance radar charts, explore threads and tensions with expandable cards, manage projects. Dark mode, no build step, no JavaScript framework.
 
 Embeddings are generated locally via Ollama using nomic-embed-text (768 dimensions). If Ollama isn't available, the server still works — search falls back to keyword-only mode, and embeddings are backfilled when Ollama comes online.
 
@@ -285,7 +311,7 @@ hearth status
 hearth ui --open
 ```
 
-Browse memories, view session timelines with resonance radar charts, manage projects, export data. Dark mode by default.
+Browse memories, view session timelines with resonance radar charts, explore threads and tensions, manage projects, export data. Dark mode by default.
 
 ### With DB Browser
 
@@ -328,7 +354,7 @@ Hearth is a proof of concept that personal data can be captured, stored, and que
 | Transcription | faster-whisper (CTranslate2) |
 | Web UI | FastAPI + Jinja2 + htmx |
 | Config | YAML |
-| Tests | pytest (219 passing) |
+| Tests | pytest (308 passing) |
 
 ---
 

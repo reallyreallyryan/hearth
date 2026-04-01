@@ -112,10 +112,12 @@ def create_app(
     from hearth.web.routes.dashboard import router as dashboard_router
     from hearth.web.routes.projects import router as projects_router
     from hearth.web.routes.sessions import router as sessions_router
+    from hearth.web.routes.threads import router as threads_router
     app.include_router(memories_router)
     app.include_router(dashboard_router)
     app.include_router(projects_router)
     app.include_router(sessions_router)
+    app.include_router(threads_router)
 
     # Root route — redirect to memories for now
     @app.get("/", response_class=HTMLResponse)

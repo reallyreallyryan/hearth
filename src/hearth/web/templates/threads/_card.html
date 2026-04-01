@@ -1,0 +1,26 @@
+<div class="thread-card" id="thread-{{ thread.id[:8] }}">
+    <div class="thread-card-main"
+         hx-get="/threads/{{ thread.id }}"
+         hx-target="#detail-{{ thread.id[:8] }}"
+         hx-swap="innerHTML"
+         hx-trigger="click"
+         style="cursor: pointer;">
+        <div class="thread-card-header">
+            <h3 class="thread-title">{{ thread.title }}</h3>
+            <span class="badge badge-status-{{ thread.status }}">{{ thread.status }}</span>
+        </div>
+        <div class="thread-card-meta">
+            {% if thread.project %}
+            <span class="badge badge-project">{{ thread.project }}</span>
+            {% endif %}
+            <span class="thread-counts mono">{{ thread.session_count }} session{{ 's' if thread.session_count != 1 }} &middot; {{ thread.tension_count }} tension{{ 's' if thread.tension_count != 1 }}</span>
+        </div>
+        {% if thread.trajectory %}
+        <p class="thread-trajectory">{{ thread.trajectory | truncate_content(200) }}</p>
+        {% endif %}
+        <div class="thread-timestamps mono muted">
+            Created {{ thread.created_at | timeago }} &middot; Updated {{ thread.updated_at | timeago }}
+        </div>
+    </div>
+    <div class="thread-detail-expand" id="detail-{{ thread.id[:8] }}"></div>
+</div>

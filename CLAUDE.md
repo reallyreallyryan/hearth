@@ -33,9 +33,9 @@ For detailed instructions, see `INSTALL_GUIDE.md`.
 
 ## Quick Context
 
-- **Brain:** SQLite database (`hearth.db`) with structured memory storage, FTS5, sqlite-vec for embeddings, and resonance tables for session-level emotional fingerprints
-- **Spine:** Python MCP server exposing memory/project/session tools to any MCP client (Claude Desktop, LM Studio, Cursor, etc.)
-- **Shell:** CLI tools (`hearth init`, `hearth serve`, `hearth ui`) + web dashboard (FastAPI + htmx) with session timeline and resonance radar charts
+- **Brain:** SQLite database (`hearth.db`) with structured memory storage, FTS5, sqlite-vec for embeddings, resonance tables for session-level emotional fingerprints, and threads/tensions for tracking lines of inquiry and unresolved questions
+- **Spine:** Python MCP server exposing memory/project/session/thread/tension tools to any MCP client (Claude Desktop, LM Studio, Cursor, etc.)
+- **Shell:** CLI tools (`hearth init`, `hearth serve`, `hearth ui`) + web dashboard (FastAPI + htmx) with session timeline, resonance radar charts, and threads/tensions page
 
 The MCP server IS the product. The .db file is the product. Everything else is a front door.
 
@@ -47,7 +47,8 @@ Follow the MCP-first strategy in the project brief:
    - **Phase 1b — Ingest Pipeline (DONE):** `hearth ingest` — transcribe audio → embed → store as searchable memory. Full loop: voice → database → queryable via MCP.
 2. **Phase 3a — Web Dashboard (DONE):** `hearth ui` — local web dashboard for browsing, searching, editing, and managing memories. FastAPI + Jinja2 + htmx. Dark mode. No build step.
 3. **Phase 3b — Resonance Layer (DONE):** 11-dimensional emotional embedding system for session-level context. Captures the texture of AI-human collaboration — not just what was discussed, but how it felt. Includes `resonance_schema.sql`, session/resonance CRUD in `db.py`, 4 new MCP tools, vec0 similarity search in resonance space, and web dashboard with radar chart visualization.
-4. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
+4. **Phase 3c — Threads & Tension (DONE):** Tracks lines of thinking (threads) and unresolved questions (tensions) across sessions. Includes `threads_schema.sql`, thread/tension CRUD in `db.py`, 3 new MCP tools (`thread_list`, `tension_list`, `session_reflect`), and web dashboard (`/threads` page with expandable cards, session timeline, tension perspectives, status badges, and project/status filters). Threads carry trajectory, tensions carry perspectives as JSON. `session_reflect` bundles all write operations into a single batch call at session close.
+5. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
 
 **Phase 1 is the entire shippable product. A user should be able to `pip install hearth-memory`, run `hearth init && hearth serve`, and have persistent memory working in Claude Desktop and LM Studio within 2 minutes.**
 
@@ -90,6 +91,16 @@ Sessions wrap conversations with emotional context:
 - Session-memory links: which memories were created or accessed during which session
 - The AI model self-reports resonance at session close — no text analysis, no inference
 - `RESONANCE_AXES` tuple in `config.py` defines axis order (matters for vec0 packing)
+
+### Threads & Tension Layer (v0.3.0)
+
+Threads and tensions track trajectory and unfinished business across sessions:
+- Threads: named lines of inquiry with status (open/parked/resolved/abandoned), trajectory notes, and cross-session linkage via `thread_sessions`
+- Tensions: unresolved questions with status (open/evolving/resolved/dissolved), perspectives stored as JSON array, optional thread linkage
+- `session_reflect` bundles all thread/tension writes into a single batch call at session close — no scattered tool calls during conversation
+- Thread CRUD: `create_thread`, `get_thread`, `update_thread`, `list_threads` (with session_count/tension_count), `link_thread_session`, `get_thread_sessions`
+- Tension CRUD: `create_tension`, `get_tension`, `update_tension`, `add_tension_perspective` (auto-transitions open → evolving), `list_tensions` (filters by project via thread or session)
+- `VALID_THREAD_STATUSES` and `VALID_TENSION_STATUSES` in `config.py`
 
 ## What NOT to Build
 

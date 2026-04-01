@@ -474,6 +474,187 @@ async def session_history(
     return sessions
 
 
+# ── Thread & Tension Tools ─────────────────────────────────────────
+
+
+@mcp.tool(
+    name="thread_list",
+    description=(
+        "List active threads, optionally filtered by project or status. "
+        "Use at session start to see what lines of inquiry are open. "
+        "Each thread includes its current trajectory, session count, and tension count."
+    ),
+)
+async def thread_list(
+    project: str | None = None,
+    status: str | None = None,
+    limit: int = 20,
+    ctx: Context = None,
+) -> list[dict[str, Any]]:
+    db = _get_db(ctx)
+    try:
+        return db.list_threads(project=project, status=status, limit=limit)
+    except ValueError as e:
+        return [{"error": str(e)}]
+
+
+@mcp.tool(
+    name="tension_list",
+    description=(
+        "List open tensions (unresolved questions or disagreements). "
+        "Optionally filter by thread, project, or status. "
+        "Use at session start to see what's unresolved."
+    ),
+)
+async def tension_list(
+    thread_id: str | None = None,
+    project: str | None = None,
+    status: str | None = None,
+    limit: int = 20,
+    ctx: Context = None,
+) -> list[dict[str, Any]]:
+    db = _get_db(ctx)
+    try:
+        return db.list_tensions(
+            thread_id=thread_id, project=project, status=status, limit=limit,
+        )
+    except ValueError as e:
+        return [{"error": str(e)}]
+
+
+@mcp.tool(
+    name="session_reflect",
+    description=(
+        "Reflect on threads and tensions at session close. "
+        "Create new threads, update existing ones with trajectory notes, "
+        "create new tensions, add perspectives to existing tensions, "
+        "and resolve tensions. Call this alongside session_close."
+    ),
+)
+async def session_reflect(
+    session_id: str,
+    threads: list[dict[str, Any]] | None = None,
+    tensions: list[dict[str, Any]] | None = None,
+    ctx: Context = None,
+) -> dict[str, Any]:
+    db = _get_db(ctx)
+
+    # Validate the session exists
+    try:
+        db._validate_session_exists(session_id)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    results: dict[str, Any] = {
+        "session_id": session_id,
+        "threads_created": [],
+        "threads_updated": [],
+        "threads_linked": [],
+        "tensions_created": [],
+        "perspectives_added": [],
+        "tensions_resolved": [],
+        "errors": [],
+    }
+
+    for i, ta in enumerate(threads or []):
+        try:
+            action = ta.get("action")
+            if action == "create":
+                thread = db.create_thread(
+                    title=ta["title"],
+                    project=ta.get("project"),
+                    trajectory=ta.get("trajectory"),
+                    session_id=session_id,
+                )
+                results["threads_created"].append(thread)
+            elif action == "update":
+                thread = db.update_thread(
+                    thread_id=ta["thread_id"],
+                    title=ta.get("title"),
+                    status=ta.get("status"),
+                    trajectory=ta.get("trajectory"),
+                )
+                if thread is None:
+                    results["errors"].append(
+                        {"index": i, "type": "thread",
+                         "error": f"Thread '{ta['thread_id']}' not found"}
+                    )
+                else:
+                    db.link_thread_session(
+                        ta["thread_id"], session_id,
+                        trajectory_note=ta.get("trajectory_note"),
+                    )
+                    results["threads_updated"].append(thread)
+            elif action == "link":
+                db.link_thread_session(
+                    thread_id=ta["thread_id"],
+                    session_id=session_id,
+                    trajectory_note=ta.get("trajectory_note"),
+                )
+                results["threads_linked"].append(
+                    {"thread_id": ta["thread_id"], "session_id": session_id}
+                )
+            else:
+                results["errors"].append(
+                    {"index": i, "type": "thread",
+                     "error": f"Unknown thread action '{action}'"}
+                )
+        except (ValueError, KeyError) as e:
+            results["errors"].append(
+                {"index": i, "type": "thread", "error": str(e)}
+            )
+
+    for i, ta in enumerate(tensions or []):
+        try:
+            action = ta.get("action")
+            if action == "create":
+                tension = db.create_tension(
+                    question=ta["question"],
+                    thread_id=ta.get("thread_id"),
+                    session_id=session_id,
+                )
+                results["tensions_created"].append(tension)
+            elif action == "perspective":
+                tension = db.add_tension_perspective(
+                    tension_id=ta["tension_id"],
+                    perspective=ta["perspective"],
+                    source=ta.get("source", "assistant"),
+                    session_id=session_id,
+                )
+                if tension is None:
+                    results["errors"].append(
+                        {"index": i, "type": "tension",
+                         "error": f"Tension '{ta['tension_id']}' not found"}
+                    )
+                else:
+                    results["perspectives_added"].append(tension)
+            elif action == "resolve":
+                tension = db.update_tension(
+                    tension_id=ta["tension_id"],
+                    status=ta.get("status", "resolved"),
+                    resolution=ta.get("resolution"),
+                    resolved_session_id=session_id,
+                )
+                if tension is None:
+                    results["errors"].append(
+                        {"index": i, "type": "tension",
+                         "error": f"Tension '{ta['tension_id']}' not found"}
+                    )
+                else:
+                    results["tensions_resolved"].append(tension)
+            else:
+                results["errors"].append(
+                    {"index": i, "type": "tension",
+                     "error": f"Unknown tension action '{action}'"}
+                )
+        except (ValueError, KeyError) as e:
+            results["errors"].append(
+                {"index": i, "type": "tension", "error": str(e)}
+            )
+
+    return results
+
+
 def run_server() -> None:
     """Entry point for `hearth serve`. Runs MCP server over stdio."""
     mcp.run(transport="stdio")

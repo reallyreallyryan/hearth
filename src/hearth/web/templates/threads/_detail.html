@@ -1,0 +1,70 @@
+<div class="thread-detail-inner">
+    <div class="thread-detail">
+        {% if sessions %}
+        <div class="thread-sessions-section">
+            <h4>Session Timeline <span class="count-badge">{{ sessions | length }}</span></h4>
+            <div class="thread-timeline-entries">
+                {% for s in sessions | reverse %}
+                <div class="thread-timeline-entry">
+                    <div class="thread-timeline-session">
+                        <span class="session-date">{{ s.started_at | timeago }}</span>
+                        {% if s.summary %}
+                        <span class="thread-timeline-summary">&mdash; {{ s.summary }}</span>
+                        {% endif %}
+                    </div>
+                    {% if s.trajectory_note %}
+                    <div class="thread-timeline-note">
+                        &rarr; {{ s.trajectory_note }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if tensions %}
+        <div class="thread-tensions-section">
+            <h4>Tensions <span class="count-badge">{{ tensions | length }}</span></h4>
+            {% for tension in tensions %}
+            <div class="tension-card">
+                <div class="tension-header">
+                    <span class="tension-status tension-status-{{ tension.status }}">
+                        {% if tension.status == 'resolved' %}&#x2713;{% elif tension.status == 'dissolved' %}&mdash;{% else %}&#x25CF;{% endif %}
+                    </span>
+                    <span class="tension-question">{{ tension.question }}</span>
+                    <span class="badge badge-status-{{ tension.status }}">{{ tension.status }}</span>
+                </div>
+                {% if tension.perspectives %}
+                <div class="tension-perspectives">
+                    {% for p in tension.perspectives %}
+                    <div class="tension-perspective-item">
+                        <span class="tension-perspective-source">{{ p.source }}:</span>
+                        {{ p.perspective }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if tension.resolution %}
+                <div class="tension-resolution">
+                    <span class="tension-resolution-label">Resolution:</span> {{ tension.resolution }}
+                </div>
+                {% endif %}
+                <div class="tension-meta mono muted">
+                    Emerged {{ tension.created_at | timeago }}
+                    {% if tension.resolved_session_id %}
+                    &middot; Resolved {{ tension.updated_at | timeago }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if not sessions and not tensions %}
+        <div class="empty-state" style="padding: 40px 20px;">
+            <p class="muted">This thread has no linked sessions or tensions yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>

@@ -1225,3 +1225,291 @@ a:hover { color: var(--ember-bright); }
 ::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
 }
+
+/* ── Thread Cards ──────────────────────────────────────── */
+
+.thread-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.thread-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all 0.25s var(--ease);
+    animation: fade-in-up 0.3s var(--ease) both;
+}
+
+.thread-card:hover {
+    border-color: var(--border);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 30px var(--ember-glow);
+}
+
+.thread-card-main {
+    padding: 20px 24px;
+}
+
+.thread-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.thread-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+}
+
+.thread-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.thread-counts {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.thread-trajectory {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0 0 8px 0;
+}
+
+.thread-timestamps {
+    font-size: 11px;
+}
+
+/* ── Thread Detail (Expanded) ──────────────────────────── */
+
+.thread-detail {
+    padding: 0 24px 24px;
+    border-top: 1px solid var(--border-subtle);
+    animation: detail-enter 0.25s var(--ease);
+}
+
+.thread-sessions-section,
+.thread-tensions-section {
+    padding-top: 20px;
+}
+
+.thread-tensions-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.thread-sessions-section h4,
+.thread-tensions-section h4 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+}
+
+/* ── Thread Timeline Entries ───────────────────────────── */
+
+.thread-timeline-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.thread-timeline-entry {
+    padding-left: 16px;
+    border-left: 2px solid var(--border);
+    transition: border-color 0.2s var(--ease);
+}
+
+.thread-timeline-entry:hover {
+    border-left-color: var(--ember-dim);
+}
+
+.thread-timeline-session {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.thread-timeline-session .session-date {
+    color: var(--text-muted);
+}
+
+.thread-timeline-summary {
+    color: var(--text-secondary);
+}
+
+.thread-timeline-note {
+    font-size: 13px;
+    color: var(--ember);
+    margin-top: 4px;
+    padding-left: 4px;
+}
+
+/* ── Status Badges ─────────────────────────────────────── */
+
+.badge-status-open {
+    background: var(--ember-glow);
+    color: var(--ember);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid rgba(232, 113, 58, 0.2);
+}
+
+.badge-status-parked {
+    background: var(--surface-hover);
+    color: var(--text-muted);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid var(--border-subtle);
+}
+
+.badge-status-resolved {
+    background: rgba(92, 184, 105, 0.12);
+    color: var(--success);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid rgba(92, 184, 105, 0.2);
+}
+
+.badge-status-abandoned,
+.badge-status-dissolved {
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid var(--border-subtle);
+    opacity: 0.7;
+}
+
+.badge-status-evolving {
+    background: rgba(91, 159, 212, 0.12);
+    color: var(--info);
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid rgba(91, 159, 212, 0.2);
+}
+
+/* ── Tension Cards ─────────────────────────────────────── */
+
+.tension-card {
+    background: var(--surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 10px;
+}
+
+.tension-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.tension-status {
+    flex-shrink: 0;
+    font-size: 10px;
+    line-height: 20px;
+}
+
+.tension-status-open { color: var(--ember); }
+.tension-status-evolving { color: var(--info); }
+.tension-status-resolved { color: var(--success); }
+.tension-status-dissolved { color: var(--text-muted); }
+
+.tension-question {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+.tension-perspectives {
+    margin: 8px 0 8px 18px;
+    padding-left: 12px;
+    border-left: 2px solid var(--border-subtle);
+}
+
+.tension-perspective-item {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+
+.tension-perspective-item:last-child {
+    margin-bottom: 0;
+}
+
+.tension-perspective-source {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.tension-resolution {
+    font-size: 13px;
+    color: var(--success);
+    margin: 8px 0 8px 18px;
+}
+
+.tension-resolution-label {
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.tension-meta {
+    font-size: 11px;
+    margin-top: 8px;
+}
+
+/* ── Free Tensions Section ─────────────────────────────── */
+
+.free-tensions-section {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.free-tensions-section h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 16px;
+}
+
+/* ── Thread Card Stagger Animations ────────────────────── */
+
+.thread-timeline .thread-card:nth-child(1) { animation-delay: 0s; }
+.thread-timeline .thread-card:nth-child(2) { animation-delay: 0.05s; }
+.thread-timeline .thread-card:nth-child(3) { animation-delay: 0.10s; }
+.thread-timeline .thread-card:nth-child(4) { animation-delay: 0.15s; }
+.thread-timeline .thread-card:nth-child(5) { animation-delay: 0.20s; }
+.thread-timeline .thread-card:nth-child(6) { animation-delay: 0.25s; }

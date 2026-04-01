@@ -6,8 +6,8 @@
 |---|---|
 | **Started** | March 2026 |
 | **Author** | Ryan Kelems + Claude |
-| **Status** | Phases 1–3b Complete — Relationship Persistence Layer Operational |
-| **Version** | v0.4 — Resonance layer, dashboard, RPL architecture |
+| **Status** | Phases 1–3c Complete — Threads & Tension Layer Operational |
+| **Version** | v0.4 — Resonance layer, threads & tension, dashboard, RPL architecture |
 
 ---
 
@@ -20,6 +20,8 @@ Hearth is already a registered project in cairn's SCMS with vision documentation
 **Phase 2 (Local Transcription + Voice Pipeline) is complete:** faster-whisper integration working. Full loop demonstrated: audio file → local transcription → memory storage → local model query via MCP. A 9B local model (qwen3.5) successfully queried personal memories transcribed from voice notes, returning personalized results by name with zero cloud involvement.
 
 **Phase 3b (Relationship Persistence Layer) is complete:** 11-axis session resonance system operational. Sessions capture the emotional texture of AI-human collaboration as searchable vectors. Dashboard serves resonance visualizations locally. 219 passing tests, zero regressions. Session zero recorded. v0.2 tagged.
+
+**Phase 3c (Threads & Tension) is complete:** Threads track lines of inquiry across sessions. Tensions track unresolved questions with perspectives. 3 new MCP tools (`thread_list`, `tension_list`, `session_reflect`), web dashboard with expandable thread cards, session timeline, tension perspectives, and status filtering. 308 passing tests, zero regressions. v0.3 tagged.
 
 This roadmap builds on what exists — not from scratch.
 

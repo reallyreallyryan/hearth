@@ -14,6 +14,8 @@ DEFAULT_CONFIG_PATH = HEARTH_DIR / "config.yaml"
 VALID_CATEGORIES = {"general", "learning", "pattern", "reference", "decision"}
 VALID_SOURCES = {"user", "assistant", "system", "transcription"}
 VALID_PROJECT_STATUSES = {"active", "paused", "completed", "archived"}
+VALID_THREAD_STATUSES = {"open", "parked", "resolved", "abandoned"}
+VALID_TENSION_STATUSES = {"open", "evolving", "resolved", "dissolved"}
 
 RESONANCE_AXES = (
     "exploration_execution",
@@ -54,7 +56,7 @@ class TranscriptionConfig:
 
 @dataclass
 class HearthConfig:
-    version: str = "0.2.0"
+    version: str = "0.3.0"
     db_path: Path = field(default_factory=lambda: DEFAULT_DB_PATH)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
@@ -126,7 +128,7 @@ def save_default_config(config_path: Path) -> None:
     """Write default config.yaml to disk."""
     data = {
         "hearth": {
-            "version": "0.2.0",
+            "version": "0.3.0",
             "db_path": "./hearth.db",
         },
         "models": {

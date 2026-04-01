@@ -12,12 +12,20 @@ from typing import Any
 import apsw
 import sqlite_vec
 
-from hearth.config import RESONANCE_AXES, VALID_CATEGORIES, VALID_PROJECT_STATUSES, VALID_SOURCES
+from hearth.config import (
+    RESONANCE_AXES,
+    VALID_CATEGORIES,
+    VALID_PROJECT_STATUSES,
+    VALID_SOURCES,
+    VALID_TENSION_STATUSES,
+    VALID_THREAD_STATUSES,
+)
 
 logger = logging.getLogger("hearth.db")
 
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 RESONANCE_SCHEMA_PATH = Path(__file__).parent / "resonance_schema.sql"
+THREADS_SCHEMA_PATH = Path(__file__).parent / "threads_schema.sql"
 
 
 def _now() -> str:
@@ -89,6 +97,10 @@ class HearthDB:
                 ")"
             )
 
+        # Load threads & tension schema
+        threads_sql = THREADS_SCHEMA_PATH.read_text()
+        cursor.execute(threads_sql)
+
     def close(self) -> None:
         if self._conn is not None:
             self._conn.close()
@@ -104,6 +116,11 @@ class HearthDB:
                 d["tags"] = json.loads(d["tags"])
             except (json.JSONDecodeError, TypeError):
                 d["tags"] = []
+        if "perspectives" in d and d["perspectives"] is not None:
+            try:
+                d["perspectives"] = json.loads(d["perspectives"])
+            except (json.JSONDecodeError, TypeError):
+                d["perspectives"] = []
         if "archived" in d:
             d["archived"] = bool(d["archived"])
         return d
@@ -156,6 +173,34 @@ class HearthDB:
         ))
         if not row:
             raise ValueError(f"Session '{session_id}' does not exist")
+
+    def _validate_thread_status(self, status: str) -> None:
+        if status not in VALID_THREAD_STATUSES:
+            raise ValueError(
+                f"Invalid thread status '{status}'. "
+                f"Must be one of: {', '.join(sorted(VALID_THREAD_STATUSES))}"
+            )
+
+    def _validate_thread_exists(self, thread_id: str) -> None:
+        row = list(self.conn.execute(
+            "SELECT 1 FROM threads WHERE id = ?", (thread_id,)
+        ))
+        if not row:
+            raise ValueError(f"Thread '{thread_id}' does not exist")
+
+    def _validate_tension_status(self, status: str) -> None:
+        if status not in VALID_TENSION_STATUSES:
+            raise ValueError(
+                f"Invalid tension status '{status}'. "
+                f"Must be one of: {', '.join(sorted(VALID_TENSION_STATUSES))}"
+            )
+
+    def _validate_tension_exists(self, tension_id: str) -> None:
+        row = list(self.conn.execute(
+            "SELECT 1 FROM tensions WHERE id = ?", (tension_id,)
+        ))
+        if not row:
+            raise ValueError(f"Tension '{tension_id}' does not exist")
 
     # ── Memory CRUD ─────────────────────────────────────────────────
 
@@ -598,6 +643,329 @@ class HearthDB:
             "WHERE sm.session_id = ? "
             "ORDER BY m.created_at ASC",
             (session_id,),
+        )
+        return [self._row_to_dict(cursor, row) for row in cursor]
+
+    # ── Thread CRUD ─────────────────────────────────────────────────
+
+    def create_thread(
+        self,
+        title: str,
+        project: str | None = None,
+        session_id: str | None = None,
+        trajectory: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a new thread (line of inquiry). Returns the created thread."""
+        if project is not None:
+            self._validate_project_exists(project)
+        if session_id is not None:
+            self._validate_session_exists(session_id)
+
+        thread_id = _new_id()
+        now = _now()
+        self.conn.execute(
+            "INSERT INTO threads (id, title, project, status, trajectory, "
+            "created_session_id, created_at, updated_at) "
+            "VALUES (?, ?, ?, 'open', ?, ?, ?, ?)",
+            (thread_id, title, project, trajectory, session_id, now, now),
+        )
+
+        # Auto-link the creating session
+        if session_id is not None:
+            self.conn.execute(
+                "INSERT OR IGNORE INTO thread_sessions "
+                "(thread_id, session_id, created_at) VALUES (?, ?, ?)",
+                (thread_id, session_id, now),
+            )
+
+        return {
+            "id": thread_id,
+            "title": title,
+            "project": project,
+            "status": "open",
+            "trajectory": trajectory,
+            "created_session_id": session_id,
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    def get_thread(self, thread_id: str) -> dict[str, Any] | None:
+        """Get a single thread by ID. Returns None if not found."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM threads WHERE id = ?", (thread_id,))
+        row = next(cursor, None)
+        if row is None:
+            return None
+        return self._row_to_dict(cursor, row)
+
+    def update_thread(
+        self,
+        thread_id: str,
+        title: str | None = None,
+        status: str | None = None,
+        trajectory: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Update thread fields. Returns updated thread or None if not found."""
+        existing = self.get_thread(thread_id)
+        if existing is None:
+            return None
+
+        if status is not None:
+            self._validate_thread_status(status)
+
+        updates: list[str] = []
+        params: list[Any] = []
+
+        if title is not None:
+            updates.append("title = ?")
+            params.append(title)
+        if status is not None:
+            updates.append("status = ?")
+            params.append(status)
+        if trajectory is not None:
+            updates.append("trajectory = ?")
+            params.append(trajectory)
+
+        if not updates:
+            return existing
+
+        updates.append("updated_at = ?")
+        params.append(_now())
+        params.append(thread_id)
+
+        self.conn.execute(
+            f"UPDATE threads SET {', '.join(updates)} WHERE id = ?",
+            tuple(params),
+        )
+        return self.get_thread(thread_id)
+
+    def list_threads(
+        self,
+        project: str | None = None,
+        status: str | None = None,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """List threads with session_count and tension_count."""
+        conditions: list[str] = []
+        params: list[Any] = []
+
+        if project is not None:
+            conditions.append("t.project = ?")
+            params.append(project)
+        if status is not None:
+            self._validate_thread_status(status)
+            conditions.append("t.status = ?")
+            params.append(status)
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.append(limit)
+
+        cursor = self.conn.cursor()
+        cursor.execute(
+            f"SELECT t.*, "
+            f"(SELECT COUNT(*) FROM thread_sessions ts "
+            f"WHERE ts.thread_id = t.id) AS session_count, "
+            f"(SELECT COUNT(*) FROM tensions tn "
+            f"WHERE tn.thread_id = t.id) AS tension_count "
+            f"FROM threads t {where} "
+            f"ORDER BY t.updated_at DESC LIMIT ?",
+            tuple(params),
+        )
+        return [self._row_to_dict(cursor, row) for row in cursor]
+
+    def link_thread_session(
+        self,
+        thread_id: str,
+        session_id: str,
+        trajectory_note: str | None = None,
+    ) -> None:
+        """Link a thread to a session (upsert). Updates thread's updated_at."""
+        self._validate_thread_exists(thread_id)
+        self._validate_session_exists(session_id)
+
+        now = _now()
+        self.conn.execute(
+            "INSERT INTO thread_sessions (thread_id, session_id, trajectory_note, created_at) "
+            "VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(thread_id, session_id) "
+            "DO UPDATE SET trajectory_note = excluded.trajectory_note",
+            (thread_id, session_id, trajectory_note, now),
+        )
+        self.conn.execute(
+            "UPDATE threads SET updated_at = ? WHERE id = ?",
+            (now, thread_id),
+        )
+
+    def get_thread_sessions(self, thread_id: str) -> list[dict[str, Any]]:
+        """Get all sessions linked to a thread, with trajectory notes."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT s.*, ts.trajectory_note "
+            "FROM thread_sessions ts "
+            "JOIN sessions s ON ts.session_id = s.id "
+            "WHERE ts.thread_id = ? "
+            "ORDER BY s.started_at ASC",
+            (thread_id,),
+        )
+        return [self._row_to_dict(cursor, row) for row in cursor]
+
+    # ── Tension CRUD ────────────────────────────────────────────────
+
+    def create_tension(
+        self,
+        question: str,
+        thread_id: str | None = None,
+        session_id: str | None = None,
+        perspectives: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """Create a new tension (unresolved question). Returns the created tension."""
+        if thread_id is not None:
+            self._validate_thread_exists(thread_id)
+        if session_id is not None:
+            self._validate_session_exists(session_id)
+
+        tension_id = _new_id()
+        now = _now()
+        perspectives_json = json.dumps(perspectives) if perspectives else "[]"
+
+        self.conn.execute(
+            "INSERT INTO tensions (id, question, status, thread_id, "
+            "created_session_id, perspectives, created_at, updated_at) "
+            "VALUES (?, ?, 'open', ?, ?, ?, ?, ?)",
+            (tension_id, question, thread_id, session_id, perspectives_json, now, now),
+        )
+
+        return {
+            "id": tension_id,
+            "question": question,
+            "status": "open",
+            "thread_id": thread_id,
+            "created_session_id": session_id,
+            "resolved_session_id": None,
+            "resolution": None,
+            "perspectives": perspectives or [],
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    def get_tension(self, tension_id: str) -> dict[str, Any] | None:
+        """Get a single tension by ID. Perspectives auto-deserialized."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM tensions WHERE id = ?", (tension_id,))
+        row = next(cursor, None)
+        if row is None:
+            return None
+        return self._row_to_dict(cursor, row)
+
+    def update_tension(
+        self,
+        tension_id: str,
+        status: str | None = None,
+        resolution: str | None = None,
+        resolved_session_id: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Update tension fields. Returns updated tension or None if not found."""
+        existing = self.get_tension(tension_id)
+        if existing is None:
+            return None
+
+        if status is not None:
+            self._validate_tension_status(status)
+        if resolved_session_id is not None:
+            self._validate_session_exists(resolved_session_id)
+
+        updates: list[str] = []
+        params: list[Any] = []
+
+        if status is not None:
+            updates.append("status = ?")
+            params.append(status)
+        if resolution is not None:
+            updates.append("resolution = ?")
+            params.append(resolution)
+        if resolved_session_id is not None:
+            updates.append("resolved_session_id = ?")
+            params.append(resolved_session_id)
+
+        if not updates:
+            return existing
+
+        updates.append("updated_at = ?")
+        params.append(_now())
+        params.append(tension_id)
+
+        self.conn.execute(
+            f"UPDATE tensions SET {', '.join(updates)} WHERE id = ?",
+            tuple(params),
+        )
+        return self.get_tension(tension_id)
+
+    def add_tension_perspective(
+        self,
+        tension_id: str,
+        perspective: str,
+        source: str = "assistant",
+        session_id: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Append a perspective to a tension's JSON array.
+        Auto-transitions status to 'evolving' if currently 'open'."""
+        existing = self.get_tension(tension_id)
+        if existing is None:
+            return None
+
+        current = existing.get("perspectives") or []
+        entry = {"perspective": perspective, "source": source}
+        if session_id is not None:
+            entry["session_id"] = session_id
+        current.append(entry)
+
+        now = _now()
+        new_status = existing["status"]
+        if new_status == "open":
+            new_status = "evolving"
+
+        self.conn.execute(
+            "UPDATE tensions SET perspectives = ?, status = ?, updated_at = ? "
+            "WHERE id = ?",
+            (json.dumps(current), new_status, now, tension_id),
+        )
+        return self.get_tension(tension_id)
+
+    def list_tensions(
+        self,
+        thread_id: str | None = None,
+        status: str | None = None,
+        project: str | None = None,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """List tensions with optional filters. Project filter matches via thread or session."""
+        conditions: list[str] = []
+        params: list[Any] = []
+
+        if project is not None:
+            conditions.append(
+                "(EXISTS (SELECT 1 FROM threads th "
+                "WHERE th.id = tn.thread_id AND th.project = ?) "
+                "OR EXISTS (SELECT 1 FROM sessions s "
+                "WHERE s.id = tn.created_session_id AND s.project = ?))"
+            )
+            params.extend([project, project])
+        if status is not None:
+            self._validate_tension_status(status)
+            conditions.append("tn.status = ?")
+            params.append(status)
+        if thread_id is not None:
+            conditions.append("tn.thread_id = ?")
+            params.append(thread_id)
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.append(limit)
+
+        cursor = self.conn.cursor()
+        cursor.execute(
+            f"SELECT tn.* FROM tensions tn {where} "
+            f"ORDER BY tn.updated_at DESC LIMIT ?",
+            tuple(params),
         )
         return [self._row_to_dict(cursor, row) for row in cursor]
 

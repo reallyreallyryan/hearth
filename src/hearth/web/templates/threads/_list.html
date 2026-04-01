@@ -1,0 +1,52 @@
+{% if threads %}
+<div class="thread-timeline">
+    {% for thread in threads %}
+    {% include "threads/_card.html" %}
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if free_tensions %}
+<div class="free-tensions-section">
+    <h2>Unattached Tensions <span class="count-badge">{{ free_tensions | length }}</span></h2>
+    <div class="thread-timeline">
+        {% for tension in free_tensions %}
+        <div class="tension-card">
+            <div class="tension-header">
+                <span class="tension-status tension-status-{{ tension.status }}">
+                    {% if tension.status == 'resolved' %}&#x2713;{% elif tension.status == 'dissolved' %}&mdash;{% else %}&#x25CF;{% endif %}
+                </span>
+                <span class="tension-question">{{ tension.question }}</span>
+                <span class="badge badge-status-{{ tension.status }}">{{ tension.status }}</span>
+            </div>
+            {% if tension.perspectives %}
+            <div class="tension-perspectives">
+                {% for p in tension.perspectives %}
+                <div class="tension-perspective-item">
+                    <span class="tension-perspective-source">{{ p.source }}:</span>
+                    {{ p.perspective }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="tension-meta mono muted">
+                Emerged {{ tension.created_at | timeago }}
+                {% if tension.resolution %}
+                &middot; {{ tension.resolution }}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if not threads and not free_tensions %}
+<div class="empty-state">
+    <h2>No threads yet</h2>
+    <p>
+        Threads emerge from conversations. Use <code>session_reflect</code> at session close
+        to create threads and track lines of inquiry.
+    </p>
+</div>
+{% endif %}

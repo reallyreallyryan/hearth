@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Threads — Hearth{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Threads <span class="count-badge">{{ threads | length }}</span></h1>
+</div>
+
+<div class="filter-bar">
+    {% if projects %}
+    <select hx-get="/threads" hx-target="#thread-list" hx-swap="innerHTML"
+            hx-include="[name='status']" name="project">
+        <option value="">All projects</option>
+        {% for p in projects %}
+        <option value="{{ p.name }}" {% if project == p.name %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+    <select hx-get="/threads" hx-target="#thread-list" hx-swap="innerHTML"
+            hx-include="[name='project']" name="status">
+        <option value="">All statuses</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div id="thread-list">
+    {% include "threads/_list.html" %}
+</div>
+{% endblock %}
