@@ -1641,3 +1641,78 @@ a:hover { color: var(--ember-bright); }
 .stat-card-warn .stat-value {
     color: var(--danger);
 }
+
+/* ── Drift Visualization ────────────────────────────────── */
+
+.drift-container {
+    overflow-x: auto;
+    margin-bottom: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    animation: fade-in-up 0.4s var(--ease);
+}
+
+.drift-container canvas {
+    display: block;
+}
+
+.drift-sparkline {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--ember);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 20px;
+    animation: detail-enter 0.25s var(--ease);
+}
+
+.drift-sparkline canvas {
+    display: block;
+    width: 100%;
+}
+
+.drift-inflections {
+    margin-top: 24px;
+    animation: fade-in-up 0.4s var(--ease);
+}
+
+.drift-inflection-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--ember);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    transition: all 0.3s var(--ease);
+}
+
+.drift-inflection-card:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.drift-inflection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.drift-inflection-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.drift-inflection-shift {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ember);
+}
+
+.drift-inflection-axes {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Drift — Hearth{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Drift {% if session_count > 0 %}<span class="count-badge" style="background: var(--ember-glow); color: var(--ember);">{{ session_count }} sessions</span>{% endif %}</h1>
+    <p class="muted">How your collaboration evolves over time.</p>
+</div>
+
+{% if projects %}
+<div class="filter-bar">
+    <select onchange="window.location.href='/drift' + (this.value ? '?project=' + this.value : '')">
+        <option value="">All projects</option>
+        {% for p in projects %}
+        <option value="{{ p.name }}" {% if project == p.name %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
+
+{% if session_count > 0 %}
+<script>
+    var DRIFT_DATA = {{ sessions_json | tojson }};
+    var DRIFT_INFLECTIONS = {{ inflections_json | tojson }};
+</script>
+
+<div class="drift-container">
+    <canvas id="heatmap-canvas"></canvas>
+</div>
+
+<div id="drift-sparkline" class="drift-sparkline" style="display: none;">
+    <canvas id="sparkline-canvas"></canvas>
+</div>
+
+{% if inflections %}
+<div class="drift-inflections">
+    <h3 style="margin-bottom: 12px; color: var(--text-secondary);">Inflection Points</h3>
+    {% for inf in inflections %}
+    <div class="drift-inflection-card">
+        <div class="drift-inflection-header">
+            <span class="drift-inflection-label">{{ inf.from_label }} &rarr; {{ inf.to_label }}</span>
+            <span class="drift-inflection-shift">{{ inf.total_shift }}</span>
+        </div>
+        <div class="drift-inflection-axes">
+            {% for ax in inf.top_axes %}
+            <span class="badge badge-source" title="{{ ax.axis }}">{{ ax.axis | replace("_", " ") }}: {{ "%+.2f" | format(ax.delta) }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No resonance data yet</h2>
+    <p>Close sessions with <code>session_close</code> to start seeing how your collaboration evolves over time.</p>
+</div>
+{% endif %}
+{% endblock %}

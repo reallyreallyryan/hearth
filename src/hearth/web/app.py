@@ -113,11 +113,13 @@ def create_app(
     from hearth.web.routes.projects import router as projects_router
     from hearth.web.routes.sessions import router as sessions_router
     from hearth.web.routes.threads import router as threads_router
+    from hearth.web.routes.drift import router as drift_router
     from hearth.web.routes.lifecycle import router as lifecycle_router
     app.include_router(memories_router)
     app.include_router(dashboard_router)
     app.include_router(projects_router)
     app.include_router(sessions_router)
+    app.include_router(drift_router)
     app.include_router(threads_router)
     app.include_router(lifecycle_router)
 
