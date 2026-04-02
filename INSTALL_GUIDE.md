@@ -73,7 +73,7 @@ hearth --version
 You should see:
 
 ```
-hearth, version 0.4.0
+hearth, version 1.0.0
 ```
 
 **If you see `command not found`:** Try `pip3 install -e ".[transcribe,ui]"` instead, then use `hearth --version` again.
@@ -149,7 +149,7 @@ hearth status
 You should see:
 
 ```
-Hearth v0.4.0
+Hearth v1.0.0
 Database: /Users/you/hearth/hearth.db
 
 Memories:   1 active, 0 archived

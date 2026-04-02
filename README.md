@@ -397,7 +397,7 @@ Hearth is a proof of concept that personal data can be captured, stored, and que
 | Transcription | faster-whisper (CTranslate2) |
 | Web UI | FastAPI + Jinja2 + htmx |
 | Config | YAML |
-| Tests | pytest (340 passing) |
+| Tests | pytest (340+ passing) |
 
 ---
 

@@ -68,7 +68,7 @@ class VitalityConfig:
 
 @dataclass
 class HearthConfig:
-    version: str = "0.4.0"
+    version: str = "1.0.0"
     db_path: Path = field(default_factory=lambda: DEFAULT_DB_PATH)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
@@ -157,7 +157,7 @@ def save_default_config(config_path: Path) -> None:
     """Write default config.yaml to disk."""
     data = {
         "hearth": {
-            "version": "0.4.0",
+            "version": "1.0.0",
             "db_path": "./hearth.db",
         },
         "models": {

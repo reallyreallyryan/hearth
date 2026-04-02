@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -56,8 +58,9 @@ def init(no_models: bool) -> None:
     # 1. Check disk space
     _check_disk_space(HEARTH_DIR.parent)
 
-    # 2. Create directory
+    # 2. Create directory (owner-only access)
     HEARTH_DIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(HEARTH_DIR, stat.S_IRWXU)  # 700
     _echo(f"  Directory: {HEARTH_DIR}")
 
     # 3. Write config
@@ -73,8 +76,11 @@ def init(no_models: bool) -> None:
 
     db = HearthDB(config.db_path)
     db.init_db()
-    _echo(f"  Database:  {config.db_path}")
     db.close()
+    # Restrict database file permissions (owner read/write only)
+    if config.db_path.exists():
+        os.chmod(config.db_path, stat.S_IRUSR | stat.S_IWUSR)  # 600
+    _echo(f"  Database:  {config.db_path}")
 
     # 5. Check Ollama (or skip)
     _echo("")
