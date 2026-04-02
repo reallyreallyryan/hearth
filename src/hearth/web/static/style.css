@@ -1513,3 +1513,131 @@ a:hover { color: var(--ember-bright); }
 .thread-timeline .thread-card:nth-child(4) { animation-delay: 0.15s; }
 .thread-timeline .thread-card:nth-child(5) { animation-delay: 0.20s; }
 .thread-timeline .thread-card:nth-child(6) { animation-delay: 0.25s; }
+
+/* ── Lifecycle Badges ─────────────────────────────────── */
+
+.badge-lifecycle-active {
+    background: rgba(92, 184, 105, 0.12);
+    color: var(--success);
+    border-color: rgba(92, 184, 105, 0.2);
+}
+
+.badge-lifecycle-fading {
+    background: rgba(212, 160, 50, 0.12);
+    color: var(--warning);
+    border-color: rgba(212, 160, 50, 0.2);
+}
+
+.badge-lifecycle-review {
+    background: rgba(217, 78, 65, 0.12);
+    color: var(--danger);
+    border-color: rgba(217, 78, 65, 0.2);
+}
+
+.badge-lifecycle-archived {
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+    border-color: var(--border-subtle);
+    opacity: 0.7;
+}
+
+/* ── Review Queue ─────────────────────────────────────── */
+
+.count-badge {
+    display: inline-block;
+    background: rgba(217, 78, 65, 0.15);
+    color: var(--danger);
+    font-size: 0.6em;
+    padding: 2px 10px;
+    border-radius: 12px;
+    vertical-align: middle;
+    margin-left: 8px;
+}
+
+.review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.review-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--danger);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    transition: all 0.3s var(--ease);
+    animation: detail-enter 0.25s var(--ease);
+}
+
+.review-card:hover {
+    border-color: var(--border);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.review-content {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    color: var(--text);
+}
+
+.review-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.review-signals {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    font-size: 12px;
+}
+
+.review-vitality {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.vitality-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--surface-hover);
+    border-radius: 3px;
+    overflow: hidden;
+    max-width: 200px;
+}
+
+.vitality-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--danger), var(--warning));
+    border-radius: 3px;
+    transition: width 0.3s var(--ease);
+}
+
+.vitality-score {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.review-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Dashboard warning card accent */
+.stat-card-warn {
+    border-color: rgba(217, 78, 65, 0.3);
+}
+
+.stat-card-warn .stat-value {
+    color: var(--danger);
+}

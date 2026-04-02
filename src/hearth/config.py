@@ -16,6 +16,7 @@ VALID_SOURCES = {"user", "assistant", "system", "transcription"}
 VALID_PROJECT_STATUSES = {"active", "paused", "completed", "archived"}
 VALID_THREAD_STATUSES = {"open", "parked", "resolved", "abandoned"}
 VALID_TENSION_STATUSES = {"open", "evolving", "resolved", "dissolved"}
+VALID_LIFECYCLE_STATES = {"active", "fading", "review", "archived"}
 
 RESONANCE_AXES = (
     "exploration_execution",
@@ -55,12 +56,24 @@ class TranscriptionConfig:
 
 
 @dataclass
+class VitalityConfig:
+    retrieval_weight: float = 0.33
+    linkage_weight: float = 0.33
+    age_weight: float = 0.34
+    active_threshold: float = 0.5
+    review_threshold: float = 0.25
+    grace_period_sessions: int = 10
+    compute_every_n_closes: int = 5
+
+
+@dataclass
 class HearthConfig:
-    version: str = "0.3.0"
+    version: str = "0.4.0"
     db_path: Path = field(default_factory=lambda: DEFAULT_DB_PATH)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
     transcription: TranscriptionConfig = field(default_factory=TranscriptionConfig)
+    vitality: VitalityConfig = field(default_factory=VitalityConfig)
     ollama_base_url: str = "http://localhost:11434"
 
 
@@ -121,6 +134,22 @@ def load_config(config_path: Path | None = None) -> HearthConfig:
     if "compute_type" in transcription:
         config.transcription.compute_type = transcription["compute_type"]
 
+    vitality = raw.get("vitality", {})
+    if "retrieval_weight" in vitality:
+        config.vitality.retrieval_weight = float(vitality["retrieval_weight"])
+    if "linkage_weight" in vitality:
+        config.vitality.linkage_weight = float(vitality["linkage_weight"])
+    if "age_weight" in vitality:
+        config.vitality.age_weight = float(vitality["age_weight"])
+    if "active_threshold" in vitality:
+        config.vitality.active_threshold = float(vitality["active_threshold"])
+    if "review_threshold" in vitality:
+        config.vitality.review_threshold = float(vitality["review_threshold"])
+    if "grace_period_sessions" in vitality:
+        config.vitality.grace_period_sessions = int(vitality["grace_period_sessions"])
+    if "compute_every_n_closes" in vitality:
+        config.vitality.compute_every_n_closes = int(vitality["compute_every_n_closes"])
+
     return config
 
 
@@ -128,7 +157,7 @@ def save_default_config(config_path: Path) -> None:
     """Write default config.yaml to disk."""
     data = {
         "hearth": {
-            "version": "0.3.0",
+            "version": "0.4.0",
             "db_path": "./hearth.db",
         },
         "models": {
@@ -147,6 +176,15 @@ def save_default_config(config_path: Path) -> None:
             "default_model": "base",
             "device": "auto",
             "compute_type": "default",
+        },
+        "vitality": {
+            "retrieval_weight": 0.33,
+            "linkage_weight": 0.33,
+            "age_weight": 0.34,
+            "active_threshold": 0.5,
+            "review_threshold": 0.25,
+            "grace_period_sessions": 10,
+            "compute_every_n_closes": 5,
         },
     }
     config_path.parent.mkdir(parents=True, exist_ok=True)

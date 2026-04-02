@@ -6,6 +6,7 @@
             <th>Category</th>
             <th>Project</th>
             <th>Source</th>
+            <th>Lifecycle</th>
             <th>Created</th>
             <th></th>
         </tr>
@@ -23,6 +24,7 @@
                 {% endif %}
             </td>
             <td><span class="badge badge-source">{{ memory.source }}</span></td>
+            <td><span class="badge badge-lifecycle-{{ memory.lifecycle_state | default('active') }}">{{ memory.lifecycle_state | default('active') }}</span></td>
             <td class="meta-cell">{{ memory.created_at | timeago }}</td>
             <td class="actions-cell">
                 <button class="btn btn-secondary btn-sm"

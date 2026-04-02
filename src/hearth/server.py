@@ -395,6 +395,14 @@ async def session_close(
         return {"error": str(e)}
 
     session["resonance"] = resonance
+
+    # Increment session close counter; trigger vitality computation every Nth close
+    close_count = db.increment_session_close_count()
+    config = _get_config(ctx)
+    if close_count % config.vitality.compute_every_n_closes == 0:
+        transitions = db.compute_vitality(config.vitality)
+        session["vitality_transitions"] = transitions
+
     return session
 
 

@@ -59,3 +59,9 @@ CREATE INDEX IF NOT EXISTS idx_memories_archived ON memories(archived);
 CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
 CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+
+-- Key-value metadata store (session counters, internal config)
+CREATE TABLE IF NOT EXISTS hearth_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);

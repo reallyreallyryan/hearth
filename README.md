@@ -176,6 +176,33 @@ The web dashboard includes a Threads page where each thread renders as an expand
 
 ---
 
+## Memory Lifecycle
+
+Memories aren't permanent by default — they earn their place through use.
+
+Hearth tracks how often each memory surfaces in search results, how many sessions reference it, and how long it's been since anyone needed it. From these three signals, every memory gets a **vitality score** that determines its lifecycle state:
+
+| State | What it means |
+|-------|--------------|
+| **active** | Healthy, regularly used or recently created |
+| **fading** | Usage declining — still fully searchable, just aging |
+| **review** | Low vitality — surfaces in the dashboard review queue for human decision |
+| **archived** | Human chose to archive — excluded from search |
+
+**The critical design choice:** Vitality never affects search ranking. A memory you haven't touched in months still surfaces if it's semantically relevant to your query. Vitality only determines whether a memory enters the review queue — the human always makes the final call.
+
+### The Review Queue
+
+```bash
+hearth ui --open
+```
+
+The web dashboard includes a Review page where fading memories surface for human decision. Each card shows the memory content, its vitality breakdown (retrieval count, session links, days since last use), and two buttons: **Keep** (restores to active) or **Archive** (soft-deletes). No bulk actions, no automation — one memory at a time, your call.
+
+Vitality computation runs automatically every 5th session close. New memories get a grace period before they're eligible for degradation.
+
+---
+
 ## What's Coming
 
 ### Drift Detection
@@ -266,7 +293,7 @@ When connected, Hearth exposes 19 tools to any MCP client:
 
 Hearth has three layers:
 
-**The Brain** — a single SQLite database (`hearth.db`) with structured memory storage, full-text search via FTS5, vector similarity search via sqlite-vec (768 dimensions for memories, 11 dimensions for resonance), session/resonance tables for relationship context, and threads/tensions for tracking lines of inquiry and unresolved questions across sessions.
+**The Brain** — a single SQLite database (`hearth.db`) with structured memory storage, full-text search via FTS5, vector similarity search via sqlite-vec (768 dimensions for memories, 11 dimensions for resonance), session/resonance tables for relationship context, threads/tensions for tracking lines of inquiry across sessions, and memory lifecycle management with vitality scoring and a human review queue.
 
 **The Spine** — a Python MCP server that exposes the Brain to any MCP-compatible client. It runs over stdio and handles all read/write operations including memory, project, session, resonance, thread, and tension tools.
 
@@ -311,7 +338,7 @@ hearth status
 hearth ui --open
 ```
 
-Browse memories, view session timelines with resonance radar charts, explore threads and tensions, manage projects, export data. Dark mode by default.
+Browse memories, view session timelines with resonance radar charts, explore threads and tensions, review fading memories in the lifecycle queue, manage projects, export data. Dark mode by default.
 
 ### With DB Browser
 
@@ -354,7 +381,7 @@ Hearth is a proof of concept that personal data can be captured, stored, and que
 | Transcription | faster-whisper (CTranslate2) |
 | Web UI | FastAPI + Jinja2 + htmx |
 | Config | YAML |
-| Tests | pytest (308 passing) |
+| Tests | pytest (340 passing) |
 
 ---
 

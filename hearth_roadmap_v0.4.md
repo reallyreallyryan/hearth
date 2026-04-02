@@ -6,7 +6,7 @@
 |---|---|
 | **Started** | March 2026 |
 | **Author** | Ryan Kelems + Claude |
-| **Status** | Phases 1–3c Complete — Threads & Tension Layer Operational |
+| **Status** | Phases 1–3e Complete — Memory Lifecycle Layer Operational |
 | **Version** | v0.4 — Resonance layer, threads & tension, dashboard, RPL architecture |
 
 ---
@@ -22,6 +22,8 @@ Hearth is already a registered project in cairn's SCMS with vision documentation
 **Phase 3b (Relationship Persistence Layer) is complete:** 11-axis session resonance system operational. Sessions capture the emotional texture of AI-human collaboration as searchable vectors. Dashboard serves resonance visualizations locally. 219 passing tests, zero regressions. Session zero recorded. v0.2 tagged.
 
 **Phase 3c (Threads & Tension) is complete:** Threads track lines of inquiry across sessions. Tensions track unresolved questions with perspectives. 3 new MCP tools (`thread_list`, `tension_list`, `session_reflect`), web dashboard with expandable thread cards, session timeline, tension perspectives, and status filtering. 308 passing tests, zero regressions. v0.3 tagged.
+
+**Phase 3e (Memory Lifecycle) is complete:** Memories degrade naturally when unused and surface for human review. Vitality scoring from three signals (retrieval frequency, linkage density, age decay), lifecycle states (active/fading/review/archived), review queue in web dashboard with Keep/Archive actions. No new MCP tools — lifecycle is internal bookkeeping. Vitality does NOT affect search ranking. 340 passing tests, zero regressions. v0.4 tagged.
 
 This roadmap builds on what exists — not from scratch.
 

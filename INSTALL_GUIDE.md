@@ -73,7 +73,7 @@ hearth --version
 You should see:
 
 ```
-hearth, version 0.2.0
+hearth, version 0.4.0
 ```
 
 **If you see `command not found`:** Try `pip3 install -e ".[transcribe,ui]"` instead, then use `hearth --version` again.
@@ -149,7 +149,7 @@ hearth status
 You should see:
 
 ```
-Hearth v0.2.0
+Hearth v0.4.0
 Database: /Users/you/hearth/hearth.db
 
 Memories:   1 active, 0 archived
@@ -196,9 +196,11 @@ hearth ui --open
 
 This starts a local dashboard at `http://localhost:8274` and opens it in your browser. You'll see:
 
-- **Memories page** — browse, search, filter, edit, and archive your memories
+- **Memories page** — browse, search, filter, edit, and archive your memories with lifecycle badges
 - **Sessions page** — view your session timeline with resonance radar charts showing the emotional texture of each conversation
-- **Dashboard** — stats cards, memory/session counts, Ollama status
+- **Threads page** — explore lines of inquiry and unresolved tensions across sessions
+- **Review page** — review fading memories and decide what to keep or archive
+- **Dashboard** — stats cards, memory/session counts, review queue count, Ollama status
 - **Projects** — create and manage projects to organize your memories
 - **Export** — download all memories as JSON or CSV
 
@@ -291,6 +293,9 @@ When Claude Desktop opens, go to Settings > Connectors > hearth. Click it — yo
 - session_close
 - session_resonance_search
 - session_history
+- thread_list
+- tension_list
+- session_reflect
 - hearth_status
 - hearth_export
 
@@ -320,13 +325,13 @@ Claude should call `memory_search` and tell you "Rust."
 
 Claude should call `project_create`.
 
-**Start a session (v0.2.0):**
+**Start a session:**
 
 > Start a new Hearth session for the beacon project.
 
 Claude should call `session_start` and return a session ID.
 
-**Close with resonance (v0.2.0):**
+**Close with resonance:**
 
 > Close this session. We were exploring new territory, had great momentum, and I was leading the direction.
 

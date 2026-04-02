@@ -33,7 +33,7 @@ For detailed instructions, see `INSTALL_GUIDE.md`.
 
 ## Quick Context
 
-- **Brain:** SQLite database (`hearth.db`) with structured memory storage, FTS5, sqlite-vec for embeddings, resonance tables for session-level emotional fingerprints, and threads/tensions for tracking lines of inquiry and unresolved questions
+- **Brain:** SQLite database (`hearth.db`) with structured memory storage, FTS5, sqlite-vec for embeddings, resonance tables for session-level emotional fingerprints, threads/tensions for tracking lines of inquiry and unresolved questions, and memory lifecycle management with vitality scoring and human review queue
 - **Spine:** Python MCP server exposing memory/project/session/thread/tension tools to any MCP client (Claude Desktop, LM Studio, Cursor, etc.)
 - **Shell:** CLI tools (`hearth init`, `hearth serve`, `hearth ui`) + web dashboard (FastAPI + htmx) with session timeline, resonance radar charts, and threads/tensions page
 
@@ -48,7 +48,8 @@ Follow the MCP-first strategy in the project brief:
 2. **Phase 3a — Web Dashboard (DONE):** `hearth ui` — local web dashboard for browsing, searching, editing, and managing memories. FastAPI + Jinja2 + htmx. Dark mode. No build step.
 3. **Phase 3b — Resonance Layer (DONE):** 11-dimensional emotional embedding system for session-level context. Captures the texture of AI-human collaboration — not just what was discussed, but how it felt. Includes `resonance_schema.sql`, session/resonance CRUD in `db.py`, 4 new MCP tools, vec0 similarity search in resonance space, and web dashboard with radar chart visualization.
 4. **Phase 3c — Threads & Tension (DONE):** Tracks lines of thinking (threads) and unresolved questions (tensions) across sessions. Includes `threads_schema.sql`, thread/tension CRUD in `db.py`, 3 new MCP tools (`thread_list`, `tension_list`, `session_reflect`), and web dashboard (`/threads` page with expandable cards, session timeline, tension perspectives, status badges, and project/status filters). Threads carry trajectory, tensions carry perspectives as JSON. `session_reflect` bundles all write operations into a single batch call at session close.
-5. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
+5. **Phase 3e — Memory Lifecycle (DONE):** Memories degrade naturally when unused and surface for human review. Adds `lifecycle_state` (active/fading/review/archived), `vitality_score`, `retrieval_count`, and `last_retrieved_at` to memories table. Vitality computed from three signals (retrieval frequency, linkage density, age decay) every 5th session close. `/lifecycle` dashboard page for human Keep/Archive decisions. No new MCP tools — lifecycle is internal bookkeeping. Vitality does NOT affect search ranking.
+6. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
 
 **Phase 1 is the entire shippable product. A user should be able to `pip install hearth-memory`, run `hearth init && hearth serve`, and have persistent memory working in Claude Desktop and LM Studio within 2 minutes.**
 
@@ -102,6 +103,30 @@ Threads and tensions track trajectory and unfinished business across sessions:
 - Tension CRUD: `create_tension`, `get_tension`, `update_tension`, `add_tension_perspective` (auto-transitions open → evolving), `list_tensions` (filters by project via thread or session)
 - `VALID_THREAD_STATUSES` and `VALID_TENSION_STATUSES` in `config.py`
 
+### Memory Lifecycle Layer (v0.4.0)
+
+Memories degrade naturally when unused and surface for human review:
+- Lifecycle states: `active` → `fading` → `review` → `archived` (only `archived` is set by human action)
+- Vitality score: weighted average of retrieval frequency (0.33), linkage density (0.33), and age decay (0.34)
+- Vitality computed every 5th session close via `compute_vitality()` — configurable in `VitalityConfig`
+- Retrieval tracking: `retrieval_count` and `last_retrieved_at` updated automatically on every `memory_search`
+- Grace period: memories created within the last N session closes are exempt from degradation
+- Review stickiness: memories in `review` state don't auto-promote back without an actual retrieval
+- `hearth_meta` key-value table stores `session_close_count` for triggering computation
+- Web dashboard: `/lifecycle` review queue with Keep/Archive actions, lifecycle badges on memory list
+- `VALID_LIFECYCLE_STATES` and `VitalityConfig` in `config.py`
+- **Vitality does NOT affect search ranking** — all non-archived memories remain fully searchable
+
+## Session Start Protocol
+
+When beginning a new session, follow this sequence:
+1. `session_start` (scoped to project if applicable)
+2. `thread_list` (scoped to project — see what lines of inquiry are open)
+3. `tension_list` (scoped to project — see what's unresolved)
+4. `memory_search` (scoped to project, query relevant to the session's topic — refresh knowledge context)
+
+Steps 2-4 provide the AI with relationship context (threads/tensions) AND knowledge context (relevant memories) so it can pick up where previous sessions left off.
+
 ## What NOT to Build
 
 - No cloud sync, no external API calls (except Ollama on localhost)
@@ -112,6 +137,8 @@ Threads and tensions track trajectory and unfinished business across sessions:
 - No resonance on individual memories — it's session-level only
 - Web UI is optional (`pip install hearth-memory[ui]`) — the MCP server is the core product
 - Keep dependencies minimal — this runs on user machines
+- No autonomous memory consolidation — human in the loop for all destructive actions
+- No search ranking changes based on vitality — lifecycle state is for review, not relevance
 
 ## CLI Interface
 

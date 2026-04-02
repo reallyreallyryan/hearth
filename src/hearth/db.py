@@ -19,6 +19,7 @@ from hearth.config import (
     VALID_SOURCES,
     VALID_TENSION_STATUSES,
     VALID_THREAD_STATUSES,
+    VitalityConfig,
 )
 
 logger = logging.getLogger("hearth.db")
@@ -100,6 +101,26 @@ class HearthDB:
         # Load threads & tension schema
         threads_sql = THREADS_SCHEMA_PATH.read_text()
         cursor.execute(threads_sql)
+
+        # Phase 3e: lifecycle columns on memories table
+        lifecycle_columns = [
+            ("lifecycle_state", "TEXT NOT NULL DEFAULT 'active'"),
+            ("vitality_score", "REAL NOT NULL DEFAULT 1.0"),
+            ("last_retrieved_at", "TEXT"),
+            ("retrieval_count", "INTEGER NOT NULL DEFAULT 0"),
+        ]
+        for col_name, col_def in lifecycle_columns:
+            try:
+                self.conn.execute(
+                    f"ALTER TABLE memories ADD COLUMN {col_name} {col_def}"
+                )
+            except apsw.SQLError:
+                pass  # Column already exists
+
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_memories_lifecycle "
+            "ON memories(lifecycle_state)"
+        )
 
     def close(self) -> None:
         if self._conn is not None:
@@ -303,7 +324,8 @@ class HearthDB:
         if existing is None:
             return False
         self.conn.execute(
-            "UPDATE memories SET archived = 1, updated_at = ? WHERE id = ?",
+            "UPDATE memories SET archived = 1, lifecycle_state = 'archived', "
+            "updated_at = ? WHERE id = ?",
             (_now(), memory_id),
         )
         return True
@@ -1089,6 +1111,13 @@ class HearthDB:
         ):
             by_project[row[0]] = row[1]
 
+        by_lifecycle: dict[str, int] = {}
+        for row in self.conn.execute(
+            "SELECT lifecycle_state, COUNT(*) FROM memories "
+            "WHERE archived = 0 GROUP BY lifecycle_state"
+        ):
+            by_lifecycle[row[0]] = row[1]
+
         return {
             "total_memories": total,
             "archived_memories": archived,
@@ -1097,6 +1126,8 @@ class HearthDB:
             "active_projects": projects,
             "by_category": by_category,
             "by_project": by_project,
+            "by_lifecycle": by_lifecycle,
+            "review_count": by_lifecycle.get("review", 0),
         }
 
     def export_memories(self, format: str = "json") -> str:
@@ -1126,6 +1157,190 @@ class HearthDB:
             return output.getvalue()
         else:
             raise ValueError(f"Unsupported export format: {format}")
+
+    # ── Lifecycle Operations ───────────────────────────────────────
+
+    def get_meta(self, key: str, default: str | None = None) -> str | None:
+        """Get a value from the hearth_meta key-value store."""
+        row = list(self.conn.execute(
+            "SELECT value FROM hearth_meta WHERE key = ?", (key,)
+        ))
+        if row:
+            return row[0][0]
+        return default
+
+    def set_meta(self, key: str, value: str) -> None:
+        """Set a value in the hearth_meta key-value store (upsert)."""
+        self.conn.execute(
+            "INSERT INTO hearth_meta (key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value),
+        )
+
+    def record_retrieval(self, memory_id: str) -> None:
+        """Increment retrieval_count and update last_retrieved_at for a memory."""
+        self.conn.execute(
+            "UPDATE memories SET retrieval_count = retrieval_count + 1, "
+            "last_retrieved_at = ? WHERE id = ? AND archived = 0",
+            (_now(), memory_id),
+        )
+
+    def increment_session_close_count(self) -> int:
+        """Increment and return the session close counter."""
+        count_str = self.get_meta("session_close_count", "0")
+        new_count = int(count_str) + 1  # type: ignore[arg-type]
+        self.set_meta("session_close_count", str(new_count))
+        return new_count
+
+    def compute_vitality(
+        self,
+        config: VitalityConfig | None = None,
+    ) -> dict[str, int]:
+        """Recompute vitality scores for all non-archived memories.
+
+        Returns a dict of state transition counts.
+        """
+        if config is None:
+            from hearth.config import VitalityConfig
+            config = VitalityConfig()
+
+        transitions: dict[str, int] = {
+            "to_active": 0, "to_fading": 0, "to_review": 0, "unchanged": 0,
+        }
+
+        # Grace period cutoff: timestamp of the Nth-most-recent session close
+        grace_cutoff: str | None = None
+        grace_rows = list(self.conn.execute(
+            "SELECT ended_at FROM sessions WHERE ended_at IS NOT NULL "
+            "ORDER BY ended_at DESC LIMIT 1 OFFSET ?",
+            (config.grace_period_sessions,),
+        ))
+        if grace_rows:
+            grace_cutoff = grace_rows[0][0]
+
+        # Get all non-archived memories
+        col_names = [
+            "id", "lifecycle_state", "vitality_score", "retrieval_count",
+            "last_retrieved_at", "updated_at", "created_at",
+        ]
+        rows = list(self.conn.execute(
+            "SELECT id, lifecycle_state, vitality_score, retrieval_count, "
+            "last_retrieved_at, updated_at, created_at "
+            "FROM memories WHERE archived = 0"
+        ))
+        memories = [dict(zip(col_names, row)) for row in rows]
+
+        if not memories:
+            return transitions
+
+        # Compute max retrieval count for normalization
+        max_retrieval = max(m["retrieval_count"] for m in memories)
+        if max_retrieval == 0:
+            max_retrieval = 1
+
+        # Build linkage density map (session_memories count per memory)
+        linkage_map: dict[str, int] = {}
+        for row in self.conn.execute(
+            "SELECT memory_id, COUNT(*) FROM session_memories GROUP BY memory_id"
+        ):
+            linkage_map[row[0]] = row[1]
+        max_linkage = max(linkage_map.values()) if linkage_map else 1
+
+        now = _now()
+        now_dt = datetime.now(timezone.utc)
+
+        for mem in memories:
+            mid = mem["id"]
+            old_state = mem["lifecycle_state"]
+
+            # Grace period: skip memories created after the cutoff
+            if grace_cutoff and mem["created_at"] > grace_cutoff:
+                transitions["unchanged"] += 1
+                continue
+
+            # Signal 1: retrieval frequency (normalized 0-1)
+            retrieval_freq = mem["retrieval_count"] / max_retrieval
+
+            # Signal 2: linkage density (normalized 0-1)
+            linkage = linkage_map.get(mid, 0) / max_linkage
+
+            # Signal 3: age decay — 1.0 / (1.0 + days / 30)
+            reference_time = mem["last_retrieved_at"] or mem["created_at"]
+            try:
+                ref_dt = datetime.fromisoformat(reference_time.replace("Z", "+00:00"))
+                days_since = (now_dt - ref_dt).total_seconds() / 86400
+            except (ValueError, TypeError):
+                days_since = 365.0
+            age_score = 1.0 / (1.0 + days_since / 30.0)
+
+            # Weighted score
+            score = (
+                config.retrieval_weight * retrieval_freq
+                + config.linkage_weight * linkage
+                + config.age_weight * age_score
+            )
+            score = max(0.0, min(1.0, score))
+
+            # State transition
+            if score >= config.active_threshold:
+                new_state = "active"
+            elif score >= config.review_threshold:
+                new_state = "fading"
+            else:
+                new_state = "review"
+
+            # Review stickiness: don't promote out of review unless
+            # the memory was actually retrieved since entering review
+            if old_state == "review" and new_state != "review":
+                last_retrieved = mem["last_retrieved_at"]
+                updated = mem["updated_at"]
+                if last_retrieved is None or last_retrieved <= updated:
+                    new_state = "review"
+
+            if new_state != old_state:
+                transitions[f"to_{new_state}"] += 1
+                self.conn.execute(
+                    "UPDATE memories SET vitality_score = ?, lifecycle_state = ?, "
+                    "updated_at = ? WHERE id = ?",
+                    (round(score, 4), new_state, now, mid),
+                )
+            else:
+                transitions["unchanged"] += 1
+                self.conn.execute(
+                    "UPDATE memories SET vitality_score = ? WHERE id = ?",
+                    (round(score, 4), mid),
+                )
+
+        return transitions
+
+    def list_review_memories(self, limit: int = 50) -> list[dict[str, Any]]:
+        """List memories in 'review' lifecycle state, lowest vitality first."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT * FROM memories WHERE lifecycle_state = 'review' AND archived = 0 "
+            "ORDER BY vitality_score ASC LIMIT ?",
+            (limit,),
+        )
+        return [self._row_to_dict(cursor, row) for row in cursor]
+
+    def count_review_memories(self) -> int:
+        """Count memories awaiting review."""
+        return next(self.conn.execute(
+            "SELECT COUNT(*) FROM memories WHERE lifecycle_state = 'review' AND archived = 0"
+        ))[0]
+
+    def keep_memory(self, memory_id: str) -> dict[str, Any] | None:
+        """Human 'keep' action: reset memory to active with full vitality."""
+        existing = self.get_memory(memory_id)
+        if existing is None:
+            return None
+        now = _now()
+        self.conn.execute(
+            "UPDATE memories SET lifecycle_state = 'active', vitality_score = 1.0, "
+            "updated_at = ? WHERE id = ?",
+            (now, memory_id),
+        )
+        return self.get_memory(memory_id)
 
 
 def _sanitize_fts_query(query: str) -> str:

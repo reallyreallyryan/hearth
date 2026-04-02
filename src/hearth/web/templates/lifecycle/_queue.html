@@ -1,0 +1,57 @@
+{% if memories %}
+<div class="review-list">
+    {% for memory in memories %}
+    <div class="review-card" id="review-{{ memory.id[:8] }}">
+        <div class="review-content">{{ memory.content | truncate_content(200) }}</div>
+        <div class="review-meta">
+            <span class="badge badge-{{ memory.category }}">{{ memory.category }}</span>
+            {% if memory.project %}
+            <span class="badge badge-project">{{ memory.project }}</span>
+            {% endif %}
+            {% if memory.tags %}
+            {% for tag in memory.tags %}
+            <span class="badge badge-tag">{{ tag }}</span>
+            {% endfor %}
+            {% endif %}
+        </div>
+        <div class="review-signals">
+            <span class="muted" title="Times returned as a search result">Retrievals: {{ memory.retrieval_count }}</span>
+            <span class="muted" title="Sessions linked to this memory">Links: {{ memory.linkage_count | default(0) }}</span>
+            <span class="muted" title="When this memory was created">Created {{ memory.created_at | timeago }}</span>
+            {% if memory.last_retrieved_at %}
+            <span class="muted" title="Last time this memory was returned in search">Last retrieved {{ memory.last_retrieved_at | timeago }}</span>
+            {% else %}
+            <span class="muted">Never retrieved</span>
+            {% endif %}
+        </div>
+        <div class="review-vitality">
+            <div class="vitality-bar">
+                <div class="vitality-fill" style="width: {{ (memory.vitality_score * 100) | int }}%"></div>
+            </div>
+            <span class="vitality-score">{{ "%.2f" | format(memory.vitality_score) }}</span>
+        </div>
+        <div class="review-actions">
+            <button class="btn btn-primary btn-sm"
+                    hx-post="/lifecycle/{{ memory.id }}/keep"
+                    hx-confirm="Keep this memory? It will be restored to active."
+                    hx-target="#review-{{ memory.id[:8] }}"
+                    hx-swap="outerHTML swap:0.3s">
+                Keep
+            </button>
+            <button class="btn btn-danger btn-sm"
+                    hx-post="/lifecycle/{{ memory.id }}/archive"
+                    hx-confirm="Archive this memory?"
+                    hx-target="#review-{{ memory.id[:8] }}"
+                    hx-swap="outerHTML swap:0.3s">
+                Archive
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No memories to review</h2>
+    <p>All memories are healthy. The review queue fills as memories fade from use.</p>
+</div>
+{% endif %}

@@ -49,13 +49,22 @@ async def hybrid_search(
 
     # Merge results
     if fts_results and vec_results:
-        return _merge_results(fts_results, vec_results, db, config, limit)
+        results = _merge_results(fts_results, vec_results, db, config, limit)
     elif fts_results:
-        return _fts_only_results(fts_results, limit)
+        results = _fts_only_results(fts_results, limit)
     elif vec_results:
-        return _semantic_only_results(vec_results, db, limit)
+        results = _semantic_only_results(vec_results, db, limit)
     else:
-        return []
+        results = []
+
+    # Track retrievals for returned memories
+    for r in results:
+        try:
+            db.record_retrieval(r.memory["id"])
+        except Exception:
+            logger.debug("Failed to record retrieval for %s", r.memory.get("id"))
+
+    return results
 
 
 def _post_filter_vec_results(

@@ -32,6 +32,10 @@
         <div class="stat-value">{{ stats.total_sessions | default(0) }}</div>
         <div class="stat-label"><a href="/sessions" style="color: inherit;">Sessions</a></div>
     </div>
+    <div class="stat-card{% if stats.review_count | default(0) > 0 %} stat-card-warn{% endif %}">
+        <div class="stat-value">{{ stats.review_count | default(0) }}</div>
+        <div class="stat-label"><a href="/lifecycle" style="color: inherit;">Needs Review</a></div>
+    </div>
     <div class="stat-card">
         <div class="stat-value">
             <span class="status-dot {% if ollama_available %}online{% else %}offline{% endif %}"></span>
