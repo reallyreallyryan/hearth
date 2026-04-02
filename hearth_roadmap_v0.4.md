@@ -25,6 +25,8 @@ Hearth is already a registered project in cairn's SCMS with vision documentation
 
 **Phase 3e (Memory Lifecycle) is complete:** Memories degrade naturally when unused and surface for human review. Vitality scoring from three signals (retrieval frequency, linkage density, age decay), lifecycle states (active/fading/review/archived), review queue in web dashboard with Keep/Archive actions. No new MCP tools — lifecycle is internal bookkeeping. Vitality does NOT affect search ranking. 340 passing tests, zero regressions. v0.4 tagged.
 
+**Drift Detection Dashboard is complete:** `/drift` page visualizes how resonance evolves across sessions. Canvas-based heatmap (sessions as columns, 11 axes as rows, cells colored by value) with clickable sparkline drill-down per axis. Inflection points flagged for transitions with total shift > 3.0. Read-only visualization — everything derived from existing `session_resonance` data, no new tables or MCP tools. The memory layer is now complete.
+
 This roadmap builds on what exists — not from scratch.
 
 ---

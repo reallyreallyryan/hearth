@@ -203,13 +203,29 @@ Vitality computation runs automatically every 5th session close. New memories ge
 
 ---
 
-## What's Coming
+## Drift Detection
 
-### Drift Detection
+How does a collaboration evolve over time?
 
-How does a collaboration evolve over time? Drift is computed from resonance data across sessions — tracking how axes shift as a project matures. A new model instance gets trajectory context: "This project started uncertain and exploratory, shifted to confident execution, and recently moved back toward exploration — something new is emerging."
+The `/drift` dashboard page answers this with two visualization layers derived from existing resonance data — nothing stored, everything computed at request time.
 
-Drift turns a collection of snapshots into a story.
+### The Heatmap
+
+A canvas-rendered grid: sessions as columns (oldest left, newest right), 11 resonance axes as rows, cells colored by value — warm amber for positive, cool blue-gray for negative. The numeric value sits inside each cell. You can see the entire resonance history of a project at a glance.
+
+### Sparklines
+
+Click any axis label on the heatmap to expand an inline sparkline below. It shows that single axis's trajectory over time as a smoothed bezier curve with dots at each session. Amber line for positive current value, blue for negative. Click again to collapse. Click a different axis to switch.
+
+### Inflection Points
+
+Below the heatmap, transitions where the total absolute shift across all 11 axes exceeds 3.0 are flagged as inflection points. Each card shows the session pair, the total shift magnitude, and the top 3 most-shifted axes. These are the moments where the collaboration changed direction.
+
+```bash
+hearth ui --open
+```
+
+Filter by project with the dropdown to see drift within a single line of work.
 
 ---
 
@@ -297,7 +313,7 @@ Hearth has three layers:
 
 **The Spine** — a Python MCP server that exposes the Brain to any MCP-compatible client. It runs over stdio and handles all read/write operations including memory, project, session, resonance, thread, and tension tools.
 
-**The Shell** — CLI tools and a local web dashboard (`hearth ui`) built with FastAPI, Jinja2, and htmx. Browse memories, view session timelines with resonance radar charts, explore threads and tensions with expandable cards, manage projects. Dark mode, no build step, no JavaScript framework.
+**The Shell** — CLI tools and a local web dashboard (`hearth ui`) built with FastAPI, Jinja2, and htmx. Browse memories, view session timelines with resonance radar charts, visualize resonance drift with heatmaps and sparklines, explore threads and tensions with expandable cards, manage projects. Dark mode, no build step, no JavaScript framework.
 
 Embeddings are generated locally via Ollama using nomic-embed-text (768 dimensions). If Ollama isn't available, the server still works — search falls back to keyword-only mode, and embeddings are backfilled when Ollama comes online.
 
@@ -338,7 +354,7 @@ hearth status
 hearth ui --open
 ```
 
-Browse memories, view session timelines with resonance radar charts, explore threads and tensions, review fading memories in the lifecycle queue, manage projects, export data. Dark mode by default.
+Browse memories, view session timelines with resonance radar charts, explore threads and tensions, visualize resonance drift with heatmaps and sparklines, review fading memories in the lifecycle queue, manage projects, export data. Dark mode by default.
 
 ### With DB Browser
 

@@ -199,6 +199,7 @@ This starts a local dashboard at `http://localhost:8274` and opens it in your br
 - **Memories page** — browse, search, filter, edit, and archive your memories with lifecycle badges
 - **Sessions page** — view your session timeline with resonance radar charts showing the emotional texture of each conversation
 - **Threads page** — explore lines of inquiry and unresolved tensions across sessions
+- **Drift page** — visualize how resonance evolves across sessions with a heatmap and sparkline drill-down
 - **Review page** — review fading memories and decide what to keep or archive
 - **Dashboard** — stats cards, memory/session counts, review queue count, Ollama status
 - **Projects** — create and manage projects to organize your memories

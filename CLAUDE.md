@@ -35,7 +35,7 @@ For detailed instructions, see `INSTALL_GUIDE.md`.
 
 - **Brain:** SQLite database (`hearth.db`) with structured memory storage, FTS5, sqlite-vec for embeddings, resonance tables for session-level emotional fingerprints, threads/tensions for tracking lines of inquiry and unresolved questions, and memory lifecycle management with vitality scoring and human review queue
 - **Spine:** Python MCP server exposing memory/project/session/thread/tension tools to any MCP client (Claude Desktop, LM Studio, Cursor, etc.)
-- **Shell:** CLI tools (`hearth init`, `hearth serve`, `hearth ui`) + web dashboard (FastAPI + htmx) with session timeline, resonance radar charts, and threads/tensions page
+- **Shell:** CLI tools (`hearth init`, `hearth serve`, `hearth ui`) + web dashboard (FastAPI + htmx) with session timeline, resonance radar charts, drift heatmap with sparklines, threads/tensions page, and memory lifecycle review queue
 
 The MCP server IS the product. The .db file is the product. Everything else is a front door.
 
@@ -49,7 +49,8 @@ Follow the MCP-first strategy in the project brief:
 3. **Phase 3b — Resonance Layer (DONE):** 11-dimensional emotional embedding system for session-level context. Captures the texture of AI-human collaboration — not just what was discussed, but how it felt. Includes `resonance_schema.sql`, session/resonance CRUD in `db.py`, 4 new MCP tools, vec0 similarity search in resonance space, and web dashboard with radar chart visualization.
 4. **Phase 3c — Threads & Tension (DONE):** Tracks lines of thinking (threads) and unresolved questions (tensions) across sessions. Includes `threads_schema.sql`, thread/tension CRUD in `db.py`, 3 new MCP tools (`thread_list`, `tension_list`, `session_reflect`), and web dashboard (`/threads` page with expandable cards, session timeline, tension perspectives, status badges, and project/status filters). Threads carry trajectory, tensions carry perspectives as JSON. `session_reflect` bundles all write operations into a single batch call at session close.
 5. **Phase 3e — Memory Lifecycle (DONE):** Memories degrade naturally when unused and surface for human review. Adds `lifecycle_state` (active/fading/review/archived), `vitality_score`, `retrieval_count`, and `last_retrieved_at` to memories table. Vitality computed from three signals (retrieval frequency, linkage density, age decay) every 5th session close. `/lifecycle` dashboard page for human Keep/Archive decisions. No new MCP tools — lifecycle is internal bookkeeping. Vitality does NOT affect search ranking.
-6. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
+6. **Drift Detection Dashboard (DONE):** `/drift` page visualizes how resonance evolves across sessions. Canvas-based heatmap (sessions x 11 axes, colored by value) with clickable sparkline drill-down per axis. Inflection points flagged for transitions with total shift > 3.0. Read-only — everything derived from existing `session_resonance` data, no new tables or MCP tools.
+7. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
 
 **Phase 1 is the entire shippable product. A user should be able to `pip install hearth-memory`, run `hearth init && hearth serve`, and have persistent memory working in Claude Desktop and LM Studio within 2 minutes.**
 
