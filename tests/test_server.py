@@ -239,6 +239,8 @@ async def test_session_start(fresh_ctx) -> None:
     result = await session_start(ctx=fresh_ctx)
     assert "id" in result
     assert result["memory_count"] == 0
+    assert "next_step" in result
+    assert "hearth_briefing" in result["next_step"]
 
 
 @pytest.mark.asyncio
@@ -247,6 +249,9 @@ async def test_session_start_with_project(ctx) -> None:
 
     result = await session_start(project="project-alpha", ctx=ctx)
     assert result["project"] == "project-alpha"
+    assert "next_step" in result
+    assert "project-alpha" in result["next_step"]
+    assert "hearth_briefing" in result["next_step"]
 
 
 @pytest.mark.asyncio

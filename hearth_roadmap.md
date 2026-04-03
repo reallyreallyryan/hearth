@@ -1,14 +1,14 @@
 # Hearth — Local-First Personal Memory System
 
-## Project Spec & Roadmap v1.0
+## Project Spec & Roadmap v0.5
 
 | | |
 |---|---|
 | **Started** | March 2026 |
 | **Author** | Ryan Kelems + Claude |
-| **Status** | v1.0.0 — Memory Layer Complete |
+| **Status** | v0.5.0 — Contextual Briefing + RAG |
 | **Tagged** | April 2, 2026 |
-| **Version** | v1.0 — Brain, spine, shell, resonance, threads, tension, lifecycle, drift |
+| **Version** | v0.5 — Brain, spine, shell, resonance, threads, tension, lifecycle, drift, briefing, RAG |
 
 ---
 
@@ -30,7 +30,7 @@ Hearth is already a registered project in cairn's SCMS with vision documentation
 
 **Drift Detection Dashboard is complete:** `/drift` page visualizes how resonance evolves across sessions. Canvas-based heatmap (sessions as columns, 11 axes as rows, cells colored by value) with clickable sparkline drill-down per axis. Inflection points flagged for transitions with total shift > 3.0. Read-only visualization — everything derived from existing `session_resonance` data, no new tables or MCP tools.
 
-**v1.0.0 tagged April 2, 2026.** The memory layer is complete. 340+ passing tests. Security hardened (DB permissions 600, directory 700). All dependency CVEs patched.
+**v0.5.0 tagged April 3, 2026.** Memory layer complete plus contextual briefing and RAG tools. 393+ passing tests. Security hardened (DB permissions 600, directory 700). All dependency CVEs patched.
 
 This roadmap builds on what exists — not from scratch.
 
@@ -108,7 +108,7 @@ Computed visualization of resonance evolution over time. Heatmap (sessions × ax
 
 ---
 
-## Completed Roadmap (v1.0)
+## Completed Roadmap (v0.5)
 
 ### Phase 1 — Brain + Spine + Shell `[COMPLETE]`
 
@@ -206,7 +206,7 @@ Computed visualization of resonance evolution over time. Heatmap (sessions × ax
 
 ---
 
-## Post-v1.0 Roadmap
+## Post-v0.5 Roadmap
 
 ### Phase 5 — USB Ingest Daemon `[SKIPPED]`
 
@@ -214,7 +214,7 @@ Computed visualization of resonance evolution over time. Heatmap (sessions × ax
 
 ---
 
-### v1.1 — Contextual Briefing + RAG `[NEXT]`
+### v0.5 — Contextual Briefing + RAG `[DONE]`
 
 **Goal:** Any model connecting to Hearth instantly knows who it's talking to.
 
@@ -261,7 +261,7 @@ Returns a token-budgeted context package. This is the per-message RAG layer — 
 
 ---
 
-### v1.2 — Dogfood Evaluation `[PLANNED]`
+### v0.6 — Dogfood Evaluation `[PLANNED]`
 
 **Goal:** Find the best default model for daily use with Hearth.
 
@@ -279,7 +279,7 @@ No special eval framework — the test is using Hearth daily with each model and
 
 ---
 
-### v1.3+ — Based on Eval Results `[PLANNED]`
+### v0.7+ — Based on Eval Results `[PLANNED]`
 
 Whatever the dogfood evaluation reveals is missing. Possible directions:
 
@@ -353,7 +353,7 @@ These are not committed — they're options the eval will clarify.
 └─────────────────────┬───────────────────────┘
                       ▼
 ┌─────────────────────────────────────────────┐
-│     CONTEXTUAL BRIEFING [v1.1 — NEXT]       │
+│     CONTEXTUAL BRIEFING [v0.5 — DONE]       │
 │  Enriched session_start (ambient context)   │
 │  hearth_context (per-query RAG)             │
 │  Token-budgeted, tiered, configurable       │
@@ -361,7 +361,7 @@ These are not committed — they're options the eval will clarify.
                       ▼
 ┌─────────────────────────────────────────────┐
 │           MCP SERVER (Spine)                │
-│   19 tools │ stdio transport │ any client   │
+│   21 tools │ stdio transport │ any client   │
 │  User decides what model touches their data │
 └─────────────────────────────────────────────┘
 ```
@@ -448,7 +448,7 @@ Each device follows the same pattern: capture locally, transfer via USB, process
 | 6 | Licensing — does MIT fully preserve principles? | Yes, MIT chosen and working | March 2026 |
 | 14 | Thread persistence format — tags or full objects? | Full thread objects with own table, trajectory, status | April 2026 |
 | 15 | Tension resolution — outcome only or full arc? | Perspectives stored as JSON array; resolution session tracked | April 2026 |
-| 7 | Buddy model selection | Deferred to v1.2 dogfood eval; not pre-selected | April 2026 |
+| 7 | Buddy model selection | Deferred to v0.6 dogfood eval; not pre-selected | April 2026 |
 | 8 | Registry curation | Deferred; full registry may not be needed if single model suffices | April 2026 |
 
 ### Still Open

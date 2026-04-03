@@ -34,7 +34,7 @@ For detailed instructions, see `INSTALL_GUIDE.md`.
 ## Quick Context
 
 - **Brain:** SQLite database (`hearth.db`) with structured memory storage, FTS5, sqlite-vec for embeddings, resonance tables for session-level emotional fingerprints, threads/tensions for tracking lines of inquiry and unresolved questions, and memory lifecycle management with vitality scoring and human review queue
-- **Spine:** Python MCP server exposing memory/project/session/thread/tension tools to any MCP client (Claude Desktop, LM Studio, Cursor, etc.)
+- **Spine:** Python MCP server exposing memory/project/session/thread/tension/briefing/context tools to any MCP client (Claude Desktop, LM Studio, Cursor, etc.). Includes contextual briefing (ambient session context) and RAG (per-query context search) via `hearth_briefing` and `hearth_context` tools.
 - **Shell:** CLI tools (`hearth init`, `hearth serve`, `hearth ui`) + web dashboard (FastAPI + htmx) with session timeline, resonance radar charts, drift heatmap with sparklines, threads/tensions page, and memory lifecycle review queue
 
 The MCP server IS the product. The .db file is the product. Everything else is a front door.
@@ -50,7 +50,8 @@ Follow the MCP-first strategy in the project brief:
 4. **Phase 3c — Threads & Tension (DONE):** Tracks lines of thinking (threads) and unresolved questions (tensions) across sessions. Includes `threads_schema.sql`, thread/tension CRUD in `db.py`, 3 new MCP tools (`thread_list`, `tension_list`, `session_reflect`), and web dashboard (`/threads` page with expandable cards, session timeline, tension perspectives, status badges, and project/status filters). Threads carry trajectory, tensions carry perspectives as JSON. `session_reflect` bundles all write operations into a single batch call at session close.
 5. **Phase 3e — Memory Lifecycle (DONE):** Memories degrade naturally when unused and surface for human review. Adds `lifecycle_state` (active/fading/review/archived), `vitality_score`, `retrieval_count`, and `last_retrieved_at` to memories table. Vitality computed from three signals (retrieval frequency, linkage density, age decay) every 5th session close. `/lifecycle` dashboard page for human Keep/Archive decisions. No new MCP tools — lifecycle is internal bookkeeping. Vitality does NOT affect search ranking.
 6. **Drift Detection Dashboard (DONE):** `/drift` page visualizes how resonance evolves across sessions. Canvas-based heatmap (sessions x 11 axes, colored by value) with clickable sparkline drill-down per axis. Inflection points flagged for transitions with total shift > 3.0. Read-only — everything derived from existing `session_resonance` data, no new tables or MCP tools.
-7. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
+7. **Phase v0.5 — Contextual Briefing + RAG (DONE):** Two new MCP tools: `hearth_briefing` (ambient session context with tiered packing and resonance scoring guide) and `hearth_context` (per-query RAG across all data sources). Shared `ContextAssembler` module with token-budgeted packing. Resonance scoring guide in `resonance_guide.py`. No new tables, no schema changes.
+8. **Phase 4 — Ecosystem:** Plugins for Claude Desktop, LM Studio, OpenClaw
 
 **Phase 1 is the entire shippable product. A user should be able to `pip install hearth-memory`, run `hearth init && hearth serve`, and have persistent memory working in Claude Desktop and LM Studio within 2 minutes.**
 
@@ -122,11 +123,19 @@ Memories degrade naturally when unused and surface for human review:
 
 When beginning a new session, follow this sequence:
 1. `session_start` (scoped to project if applicable)
-2. `thread_list` (scoped to project — see what lines of inquiry are open)
-3. `tension_list` (scoped to project — see what's unresolved)
-4. `memory_search` (scoped to project, query relevant to the session's topic — refresh knowledge context)
+2. `hearth_briefing` (scoped to same project — get full context and resonance scoring guide)
 
-Steps 2-4 provide the AI with relationship context (threads/tensions) AND knowledge context (relevant memories) so it can pick up where previous sessions left off.
+The briefing tells you who you're talking to, what's been going on, what's unresolved,
+and how to score resonance at session close. You don't need to call thread_list,
+tension_list, or memory_search separately — hearth_briefing assembles everything.
+
+For mid-conversation context on a specific topic:
+3. `hearth_context(query="topic")` — searches across all data sources
+
+At session close:
+4. `session_reflect` — create/update threads, add perspectives to tensions
+5. If this was a long conversation, call `hearth_context("resonance scoring guide")` to refresh the axis definitions before scoring
+6. `session_close` — provide summary and 11-axis resonance scores using the guide
 
 ## What NOT to Build
 

@@ -133,10 +133,10 @@ Each axis is a float from -1.0 to 1.0. The AI model self-reports these values at
 
 ### How It Works
 
-1. **Start:** The AI calls `session_start` at the beginning of a conversation
-2. **During:** Any `memory_store` calls can include a `session_id` to auto-link memories to the session
-3. **Close:** The AI calls `session_close` with a qualitative summary and its self-assessment of all 11 axes
-4. **Search:** Next conversation, `session_resonance_search` finds past sessions that *felt* similar — picking up momentum instead of starting from zero
+1. **Start:** The AI calls `session_start` then `hearth_briefing` — the briefing assembles recent sessions with resonance descriptions, active threads, open tensions, drift trends, high-vitality memories, and the resonance scoring guide. The model immediately knows who it's talking to, what's been going on, and how to close the session.
+2. **During:** Any `memory_store` calls can include a `session_id` to auto-link memories to the session. Call `hearth_context("topic")` for on-demand RAG across all data sources.
+3. **Close:** The AI calls `session_reflect` (threads/tensions), optionally `hearth_context("resonance scoring guide")` to refresh the axis definitions, then `session_close` with a qualitative summary and its self-assessment of all 11 axes.
+4. **Search:** `session_resonance_search` finds past sessions that *felt* similar — picking up momentum instead of starting from zero.
 
 Resonance data is stored as both a structured table (queryable by individual axis) and an 11-float vector in a sqlite-vec vec0 table (searchable by similarity).
 
@@ -160,8 +160,8 @@ Resonance captures *how* a session felt. Threads and tension capture *where the 
 
 ### How Threads & Tension Work
 
-1. **Session start:** The AI calls `thread_list` and `tension_list` to see what lines of inquiry are open and what's unresolved
-2. **During:** The conversation picks up threads and engages with tensions naturally
+1. **Session start:** The AI calls `hearth_briefing` which includes active threads and open tensions alongside session history, resonance descriptions, and the scoring guide
+2. **During:** The conversation picks up threads and engages with tensions naturally. Call `hearth_context("topic")` for on-demand context.
 3. **Session close:** The AI calls `session_reflect` to create/update threads, add perspectives to tensions, and resolve tensions — all in a single batch call alongside `session_close`
 
 Together with sessions and resonance, threads and tensions reconstruct not just the state of a collaboration but its **trajectory and unfinished business**.
@@ -257,7 +257,7 @@ Options for `ingest`: `-m model`, `-p project`, `-c category`, `-t "tag1,tag2"`
 
 ## MCP Tools
 
-When connected, Hearth exposes 19 tools to any MCP client:
+When connected, Hearth exposes 21 tools to any MCP client:
 
 ### Memory Tools
 
@@ -295,6 +295,13 @@ When connected, Hearth exposes 19 tools to any MCP client:
 | `thread_list` | List active threads with session/tension counts, filter by project or status |
 | `tension_list` | List unresolved questions, filter by thread, project, or status |
 | `session_reflect` | Batch create/update threads and tensions at session close |
+
+### Contextual Briefing & RAG Tools
+
+| Tool | What it does |
+|------|-------------|
+| `hearth_briefing` | Get a token-budgeted context package: recent sessions with resonance descriptions, active threads, open tensions, drift trends, high-vitality memories, and the resonance scoring guide for session close |
+| `hearth_context` | Search across all data sources (memories, threads, tensions, sessions) for context on a specific topic. Also retrieves the resonance scoring guide on request. |
 
 ### System Tools
 
@@ -397,7 +404,7 @@ Hearth is a proof of concept that personal data can be captured, stored, and que
 | Transcription | faster-whisper (CTranslate2) |
 | Web UI | FastAPI + Jinja2 + htmx |
 | Config | YAML |
-| Tests | pytest (340+ passing) |
+| Tests | pytest (390+ passing) |
 
 ---
 

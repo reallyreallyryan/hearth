@@ -13,6 +13,7 @@ from hearth import __version__
 from hearth.config import HearthConfig, load_config
 from hearth.db import HearthDB
 from hearth.embeddings import OllamaEmbedder
+from hearth.context import ContextAssembler
 from hearth.search import hybrid_search
 
 # All logging to stderr — stdout is reserved for MCP stdio transport
@@ -332,7 +333,9 @@ async def hearth_export(format: str = "json", ctx: Context = None) -> str:
     name="session_start",
     description=(
         "Start a new session. Optionally scope to a project. "
-        "Returns the session ID to use with session_close and memory_store."
+        "Returns the session ID. After calling this, ALWAYS call "
+        "hearth_briefing with the same project to get context about "
+        "who you're talking to and how to close the session properly."
     ),
 )
 async def session_start(
@@ -341,16 +344,31 @@ async def session_start(
 ) -> dict[str, Any]:
     db = _get_db(ctx)
     try:
-        return db.create_session(project=project)
+        session = db.create_session(project=project)
     except ValueError as e:
         return {"error": str(e)}
+
+    if project:
+        session["next_step"] = (
+            f"Call hearth_briefing(project='{project}') to get context about "
+            "who you're talking to, what's been happening, and how to close this session."
+        )
+    else:
+        session["next_step"] = (
+            "Call hearth_briefing() to get context about who you're talking to, "
+            "what's been happening, and how to close this session."
+        )
+    return session
 
 
 @mcp.tool(
     name="session_close",
     description=(
         "Close a session with a summary and 11-axis resonance assessment. "
-        "Each axis is a float from -1.0 to 1.0. Call at the end of a conversation."
+        "Each axis is a float from -1.0 to 1.0. Call at the end of a conversation. "
+        "See the resonance scoring guide from hearth_briefing for axis definitions "
+        "and calibration hints. If the briefing has scrolled out of context, call "
+        "hearth_context(query='resonance scoring guide') to retrieve it."
     ),
 )
 async def session_close(
@@ -661,6 +679,52 @@ async def session_reflect(
             )
 
     return results
+
+
+# ── Contextual Briefing & RAG Tools ──────────────────────────────
+
+
+@mcp.tool(
+    name="hearth_briefing",
+    description=(
+        "Get a contextual briefing assembled from Hearth's data. "
+        "Call this after session_start to understand who you're talking to, "
+        "what's been happening, what's unresolved, and how to close the session. "
+        "Includes recent sessions with resonance descriptions, active threads, "
+        "open tensions, drift trends, high-vitality memories, and the resonance "
+        "scoring guide for session_close."
+    ),
+)
+async def hearth_briefing(
+    project: str | None = None,
+    token_budget: int = 2000,
+    ctx: Context = None,
+) -> dict[str, Any]:
+    db = _get_db(ctx)
+    assembler = ContextAssembler(db)
+    return assembler.assemble_briefing(project=project, token_budget=token_budget)
+
+
+@mcp.tool(
+    name="hearth_context",
+    description=(
+        "Search across all of Hearth's data for context on a specific topic. "
+        "Unlike hearth_briefing (which gives ambient context), this tool "
+        "answers a specific question by searching memories, threads, "
+        "tensions, and session history."
+    ),
+)
+async def hearth_context(
+    query: str,
+    project: str | None = None,
+    token_budget: int = 1500,
+    ctx: Context = None,
+) -> dict[str, Any]:
+    db = _get_db(ctx)
+    assembler = ContextAssembler(db)
+    return assembler.assemble_context(
+        query=query, project=project, token_budget=token_budget,
+    )
 
 
 def run_server() -> None:
