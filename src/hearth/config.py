@@ -68,13 +68,14 @@ class VitalityConfig:
 
 @dataclass
 class HearthConfig:
-    version: str = "0.5.0"
+    version: str = "0.5.1"
     db_path: Path = field(default_factory=lambda: DEFAULT_DB_PATH)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
     transcription: TranscriptionConfig = field(default_factory=TranscriptionConfig)
     vitality: VitalityConfig = field(default_factory=VitalityConfig)
     ollama_base_url: str = "http://localhost:11434"
+    briefing_token_budget: int = 1000
 
 
 def load_config(config_path: Path | None = None) -> HearthConfig:
@@ -150,6 +151,9 @@ def load_config(config_path: Path | None = None) -> HearthConfig:
     if "compute_every_n_closes" in vitality:
         config.vitality.compute_every_n_closes = int(vitality["compute_every_n_closes"])
 
+    if "briefing_token_budget" in raw:
+        config.briefing_token_budget = int(raw["briefing_token_budget"])
+
     return config
 
 
@@ -157,7 +161,7 @@ def save_default_config(config_path: Path) -> None:
     """Write default config.yaml to disk."""
     data = {
         "hearth": {
-            "version": "0.5.0",
+            "version": "0.5.1",
             "db_path": "./hearth.db",
         },
         "models": {

@@ -135,7 +135,7 @@ For mid-conversation context on a specific topic:
 At session close:
 4. `session_reflect` — create/update threads, add perspectives to tensions
 5. If this was a long conversation, call `hearth_context("resonance scoring guide")` to refresh the axis definitions before scoring
-6. `session_close` — provide summary and 11-axis resonance scores using the guide
+6. `session_close` — provide summary and 11-axis resonance scores using the guide. All-zero scores are rejected; at least one axis must be non-zero.
 
 ## What NOT to Build
 

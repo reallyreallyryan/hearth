@@ -235,7 +235,7 @@ When a model calls `session_start`, the return payload includes a contextual bri
 - High-vitality memories for the scoped project
 - Collaboration patterns derived from session history
 
-The briefing has a **configurable token budget** (default ~2,000 tokens) with tiered packing:
+The briefing has a **configurable token budget** (default 1,000 tokens — works for 9B models out of the box; power users can increase via `briefing_token_budget` in config.yaml) with tiered packing:
 - **Tier 1 (always included, ~500 tokens):** Last 2-3 sessions, active threads
 - **Tier 2 (if budget allows, ~500-1000 tokens):** Open tensions, drift summary, top vitality memories
 - **Tier 3 (if budget allows, ~500-1000 tokens):** Older sessions, parked threads, cross-project context

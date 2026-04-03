@@ -73,7 +73,7 @@ hearth --version
 You should see:
 
 ```
-hearth, version 0.5.0
+hearth, version 0.5.1
 ```
 
 **If you see `command not found`:** Try `pip3 install -e ".[transcribe,ui]"` instead, then use `hearth --version` again.
@@ -336,7 +336,7 @@ Claude should call `session_start` and return a session ID. If a session is alre
 
 > Close this session. We were exploring new territory, had great momentum, and I was leading the direction.
 
-Claude should call `session_close` with a summary and resonance axis values. You can view the resulting radar chart in `hearth ui`.
+Claude should call `session_close` with a summary and resonance axis values (at least one axis must be non-zero — all-zero scores are rejected). You can view the resulting radar chart in `hearth ui`.
 
 ---
 

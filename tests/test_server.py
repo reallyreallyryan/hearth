@@ -282,7 +282,10 @@ async def test_session_start_creates_new_after_close(fresh_ctx) -> None:
     from hearth.server import session_close, session_start
 
     s1 = await session_start(ctx=fresh_ctx)
-    await session_close(session_id=s1["id"], summary="done", ctx=fresh_ctx)
+    await session_close(
+        session_id=s1["id"], summary="done",
+        exploration_execution=0.5, ctx=fresh_ctx,
+    )
     s2 = await session_start(ctx=fresh_ctx)
     assert s2["id"] != s1["id"]
     assert "resumed" not in s2
@@ -346,6 +349,82 @@ async def test_session_close_not_found(fresh_ctx) -> None:
 
     result = await session_close(session_id="nonexistent", summary="x", ctx=fresh_ctx)
     assert "error" in result
+
+
+# ── Resonance Zero Rejection ──────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_session_close_rejects_all_zeros(fresh_ctx) -> None:
+    from hearth.server import session_close, session_start
+
+    session = await session_start(ctx=fresh_ctx)
+    result = await session_close(session_id=session["id"], summary="Test", ctx=fresh_ctx)
+    assert "error" in result
+    assert "0.0" in result["error"]
+    # Session should NOT be closed
+    db = fresh_ctx.request_context.lifespan_context["db"]
+    s = db.get_session(session["id"])
+    assert s["ended_at"] is None
+
+
+@pytest.mark.asyncio
+async def test_session_close_accepts_partial_zeros(fresh_ctx) -> None:
+    from hearth.server import session_close, session_start
+
+    session = await session_start(ctx=fresh_ctx)
+    result = await session_close(
+        session_id=session["id"],
+        summary="Partial",
+        exploration_execution=0.8,
+        ctx=fresh_ctx,
+    )
+    assert "error" not in result
+    assert result["ended_at"] is not None
+    assert "resonance" in result
+
+
+@pytest.mark.asyncio
+async def test_session_close_accepts_negative_scores(fresh_ctx) -> None:
+    from hearth.server import session_close, session_start
+
+    session = await session_start(ctx=fresh_ctx)
+    result = await session_close(
+        session_id=session["id"],
+        summary="Negative",
+        exploration_execution=-0.5,
+        alignment_tension=-0.3,
+        stakes_casual=-0.8,
+        ctx=fresh_ctx,
+    )
+    assert "error" not in result
+    assert result["ended_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_session_close_accepts_mixed_scores(fresh_ctx) -> None:
+    from hearth.server import session_close, session_start
+
+    session = await session_start(ctx=fresh_ctx)
+    result = await session_close(
+        session_id=session["id"],
+        summary="Mixed",
+        exploration_execution=0.8,
+        alignment_tension=-0.3,
+        depth_breadth=0.5,
+        momentum_resistance=-0.7,
+        novelty_familiarity=0.2,
+        confidence_uncertainty=-0.4,
+        autonomy_direction=0.6,
+        energy_entropy=-0.1,
+        vulnerability_performance=0.3,
+        stakes_casual=-0.5,
+        mutual_transactional=0.4,
+        ctx=fresh_ctx,
+    )
+    assert "error" not in result
+    assert result["ended_at"] is not None
+    assert "resonance" in result
 
 
 @pytest.mark.asyncio
@@ -753,7 +832,10 @@ async def test_two_session_lifecycle(fresh_ctx) -> None:
     tension_id = r1["tensions_created"][0]["id"]
 
     # Close session 1
-    await session_close(session_id=s1["id"], summary="Initial exploration", ctx=fresh_ctx)
+    await session_close(
+        session_id=s1["id"], summary="Initial exploration",
+        exploration_execution=0.7, ctx=fresh_ctx,
+    )
 
     # ── Session 2 ──────────────────────────────────────────────
     s2 = await session_start(ctx=fresh_ctx)
@@ -790,7 +872,10 @@ async def test_two_session_lifecycle(fresh_ctx) -> None:
     assert r2["errors"] == []
 
     # Close session 2
-    await session_close(session_id=s2["id"], summary="Deepened the thread", ctx=fresh_ctx)
+    await session_close(
+        session_id=s2["id"], summary="Deepened the thread",
+        depth_breadth=0.6, ctx=fresh_ctx,
+    )
 
     # ── Verify Final State ─────────────────────────────────────
     db = fresh_ctx.request_context.lifespan_context["db"]

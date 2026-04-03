@@ -435,6 +435,50 @@ class TestHearthContextTool:
         assert "No relevant context found" in result["context"]
 
 
+class TestConfigurableTokenBudget:
+    """Tests for briefing_token_budget config support."""
+
+    @pytest.mark.asyncio
+    async def test_briefing_uses_config_default(self, context_db, unavailable_embedder, tmp_path) -> None:
+        from hearth.config import HearthConfig
+        from hearth.server import hearth_briefing
+
+        config = HearthConfig(db_path=tmp_path / "test.db", briefing_token_budget=800)
+        ctx = MockContext(context_db, unavailable_embedder, config)
+        result = await hearth_briefing(ctx=ctx)
+        assert result["metadata"]["token_budget"] == 800
+
+    @pytest.mark.asyncio
+    async def test_briefing_override_beats_config(self, context_db, unavailable_embedder, tmp_path) -> None:
+        from hearth.config import HearthConfig
+        from hearth.server import hearth_briefing
+
+        config = HearthConfig(db_path=tmp_path / "test.db", briefing_token_budget=800)
+        ctx = MockContext(context_db, unavailable_embedder, config)
+        result = await hearth_briefing(token_budget=2000, ctx=ctx)
+        assert result["metadata"]["token_budget"] == 2000
+
+    @pytest.mark.asyncio
+    async def test_context_uses_config_default(self, context_db, unavailable_embedder, tmp_path) -> None:
+        from hearth.config import HearthConfig
+        from hearth.server import hearth_context
+
+        config = HearthConfig(db_path=tmp_path / "test.db", briefing_token_budget=800)
+        ctx = MockContext(context_db, unavailable_embedder, config)
+        result = await hearth_context(query="Python", ctx=ctx)
+        assert result["metadata"]["token_budget"] == 800
+
+    @pytest.mark.asyncio
+    async def test_config_missing_uses_hardcoded_default(self, context_db, unavailable_embedder, tmp_path) -> None:
+        from hearth.config import HearthConfig
+        from hearth.server import hearth_briefing
+
+        config = HearthConfig(db_path=tmp_path / "test.db")
+        ctx = MockContext(context_db, unavailable_embedder, config)
+        result = await hearth_briefing(ctx=ctx)
+        assert result["metadata"]["token_budget"] == 1000
+
+
 class TestBriefingAfterSessionStart:
     """Integration test: session_start -> hearth_briefing shows new session."""
 

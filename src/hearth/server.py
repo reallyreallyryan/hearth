@@ -412,10 +412,6 @@ async def session_close(
 ) -> dict[str, Any]:
     db = _get_db(ctx)
 
-    session = db.close_session(session_id, summary=summary)
-    if session is None:
-        return {"error": f"Session '{session_id}' not found"}
-
     axes = {
         "exploration_execution": exploration_execution,
         "alignment_tension": alignment_tension,
@@ -429,6 +425,24 @@ async def session_close(
         "stakes_casual": stakes_casual,
         "mutual_transactional": mutual_transactional,
     }
+
+    # Reject all-zero resonance (local models skip optional params)
+    if all(v == 0.0 for v in axes.values()):
+        return {
+            "error": "All resonance scores are 0.0. This usually means scores were skipped. "
+                     "Please score each axis from -1.0 to 1.0 based on how this session actually felt. "
+                     "Use the resonance scoring guide from hearth_briefing for definitions. "
+                     "If the guide has scrolled out of context, call hearth_context(query='resonance scoring guide') to retrieve it. "
+                     "No axis is inherently good or bad — both poles are valid. Score what happened, not what sounds right.",
+            "session_id": session_id,
+            "hint": "Even a short session has texture. A quick setup session might be: "
+                    "exploration_execution=-0.8 (pure execution), stakes_casual=-0.5 (low stakes), "
+                    "mutual_transactional=-0.3 (somewhat transactional). Zeros mean 'I didn't try.'",
+        }
+
+    session = db.close_session(session_id, summary=summary)
+    if session is None:
+        return {"error": f"Session '{session_id}' not found"}
 
     try:
         resonance = db.store_resonance(session_id, axes)
@@ -720,10 +734,13 @@ async def session_reflect(
 )
 async def hearth_briefing(
     project: str | None = None,
-    token_budget: int = 2000,
+    token_budget: int | None = None,
     ctx: Context = None,
 ) -> dict[str, Any]:
     db = _get_db(ctx)
+    if token_budget is None:
+        config = _get_config(ctx)
+        token_budget = config.briefing_token_budget
     assembler = ContextAssembler(db)
     return assembler.assemble_briefing(project=project, token_budget=token_budget)
 
@@ -740,10 +757,13 @@ async def hearth_briefing(
 async def hearth_context(
     query: str,
     project: str | None = None,
-    token_budget: int = 1500,
+    token_budget: int | None = None,
     ctx: Context = None,
 ) -> dict[str, Any]:
     db = _get_db(ctx)
+    if token_budget is None:
+        config = _get_config(ctx)
+        token_budget = config.briefing_token_budget
     assembler = ContextAssembler(db)
     return assembler.assemble_context(
         query=query, project=project, token_budget=token_budget,
