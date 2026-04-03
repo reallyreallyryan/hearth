@@ -133,7 +133,7 @@ Each axis is a float from -1.0 to 1.0. The AI model self-reports these values at
 
 ### How It Works
 
-1. **Start:** The AI calls `session_start` then `hearth_briefing` — the briefing assembles recent sessions with resonance descriptions, active threads, open tensions, drift trends, high-vitality memories, and the resonance scoring guide. The model immediately knows who it's talking to, what's been going on, and how to close the session.
+1. **Start:** The AI calls `session_start` then `hearth_briefing` — if an open session already exists for the project, `session_start` returns it instead of creating a duplicate (with `resumed: true`). The briefing assembles recent sessions with resonance descriptions, active threads, open tensions, drift trends, high-vitality memories, and the resonance scoring guide. The model immediately knows who it's talking to, what's been going on, and how to close the session.
 2. **During:** Any `memory_store` calls can include a `session_id` to auto-link memories to the session. Call `hearth_context("topic")` for on-demand RAG across all data sources.
 3. **Close:** The AI calls `session_reflect` (threads/tensions), optionally `hearth_context("resonance scoring guide")` to refresh the axis definitions, then `session_close` with a qualitative summary and its self-assessment of all 11 axes.
 4. **Search:** `session_resonance_search` finds past sessions that *felt* similar — picking up momentum instead of starting from zero.
@@ -283,7 +283,7 @@ When connected, Hearth exposes 21 tools to any MCP client:
 
 | Tool | What it does |
 |------|-------------|
-| `session_start` | Start a new session, optionally scoped to a project |
+| `session_start` | Start or resume a session, optionally scoped to a project (returns existing open session if one exists) |
 | `session_close` | Close a session with a summary and 11-axis resonance assessment |
 | `session_resonance_search` | Find past sessions with similar emotional texture |
 | `session_history` | List recent sessions with their resonance data |

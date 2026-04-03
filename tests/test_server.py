@@ -262,6 +262,66 @@ async def test_session_start_invalid_project(fresh_ctx) -> None:
     assert "error" in result
 
 
+# ── Session Loop Guard ─────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_session_start_returns_existing_open_session(fresh_ctx) -> None:
+    from hearth.server import session_start
+
+    s1 = await session_start(ctx=fresh_ctx)
+    s2 = await session_start(ctx=fresh_ctx)
+    assert s2["id"] == s1["id"]
+    assert s2["resumed"] is True
+    assert "message" in s2
+    assert "next_step" in s2
+
+
+@pytest.mark.asyncio
+async def test_session_start_creates_new_after_close(fresh_ctx) -> None:
+    from hearth.server import session_close, session_start
+
+    s1 = await session_start(ctx=fresh_ctx)
+    await session_close(session_id=s1["id"], summary="done", ctx=fresh_ctx)
+    s2 = await session_start(ctx=fresh_ctx)
+    assert s2["id"] != s1["id"]
+    assert "resumed" not in s2
+
+
+@pytest.mark.asyncio
+async def test_session_start_different_projects_independent(ctx) -> None:
+    from hearth.server import session_start
+
+    s_alpha = await session_start(project="project-alpha", ctx=ctx)
+    s_beta = await session_start(project="project-beta", ctx=ctx)
+    assert s_alpha["id"] != s_beta["id"]
+    assert "resumed" not in s_alpha
+    assert "resumed" not in s_beta
+
+
+@pytest.mark.asyncio
+async def test_session_start_null_project_independent(ctx) -> None:
+    from hearth.server import session_start
+
+    s_null = await session_start(ctx=ctx)
+    s_alpha = await session_start(project="project-alpha", ctx=ctx)
+    assert s_null["id"] != s_alpha["id"]
+
+
+@pytest.mark.asyncio
+async def test_session_start_loop_guard(fresh_ctx) -> None:
+    from hearth.server import session_start
+
+    s1 = await session_start(ctx=fresh_ctx)
+    s2 = await session_start(ctx=fresh_ctx)
+    s3 = await session_start(ctx=fresh_ctx)
+    assert s1["id"] == s2["id"] == s3["id"]
+    # Verify only one session exists in the DB
+    db = fresh_ctx.request_context.lifespan_context["db"]
+    sessions = db.list_sessions()
+    assert len(sessions) == 1
+
+
 @pytest.mark.asyncio
 async def test_session_close(fresh_ctx) -> None:
     from hearth.server import session_close, session_start

@@ -330,7 +330,7 @@ Claude should call `project_create`.
 
 > Start a new Hearth session for the beacon project.
 
-Claude should call `session_start` and return a session ID.
+Claude should call `session_start` and return a session ID. If a session is already open for that project, it returns the existing one with `resumed: true` instead of creating a duplicate.
 
 **Close with resonance:**
 

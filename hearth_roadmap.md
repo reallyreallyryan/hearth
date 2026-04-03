@@ -224,6 +224,8 @@ Computed visualization of resonance evolution over time. Heatmap (sessions × ax
 
 #### Enriched `session_start` (Ambient Briefing)
 
+`session_start` includes a loop guard: if an open session already exists for the same project, it returns that session (with `resumed: true`) instead of creating a new one. This prevents local models from spawning duplicate sessions when confused.
+
 When a model calls `session_start`, the return payload includes a contextual briefing assembled from Hearth's data:
 
 - Recent sessions with one-line summaries and resonance shape descriptions
@@ -268,7 +270,7 @@ Returns a token-budgeted context package. This is the per-message RAG layer — 
 Rotate between Qwen, Mistral, and Llama as daily drivers connected to Hearth via MCP. Evaluate on:
 
 - **MCP tool calling reliability:** Does the model use Hearth's tools correctly?
-- **Briefing utilization:** Does it actually read and apply the session_start briefing?
+- **Briefing utilization:** Does it actually read and apply the session_start briefing (whether new or resumed)?
 - **Memory retrieval relevance:** Does `hearth_context` pull the right context?
 - **Conversational naturalness:** Does it feel like it knows you?
 - **Resonance honesty:** Does self-reporting stay genuine across models?

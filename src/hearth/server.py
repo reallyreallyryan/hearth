@@ -332,9 +332,10 @@ async def hearth_export(format: str = "json", ctx: Context = None) -> str:
 @mcp.tool(
     name="session_start",
     description=(
-        "Start a new session. Optionally scope to a project. "
-        "Returns the session ID. After calling this, ALWAYS call "
-        "hearth_briefing with the same project to get context about "
+        "Start or resume a session. If an open session already exists for the "
+        "given project, returns it instead of creating a new one (with resumed=True). "
+        "Optionally scope to a project. Returns the session ID. After calling this, "
+        "ALWAYS call hearth_briefing with the same project to get context about "
         "who you're talking to and how to close the session properly."
     ),
 )
@@ -343,6 +344,28 @@ async def session_start(
     ctx: Context = None,
 ) -> dict[str, Any]:
     db = _get_db(ctx)
+
+    # Guard: check for existing open session
+    existing = db.get_open_session(project=project)
+    if existing:
+        existing["resumed"] = True
+        existing["message"] = (
+            f"You already have an open session ({existing['id'][:8]}...). "
+            "Resuming it instead of starting a new one."
+        )
+        if project:
+            existing["next_step"] = (
+                f"Call hearth_briefing(project='{project}') to get context about "
+                "who you're talking to, what's been happening, and how to close this session."
+            )
+        else:
+            existing["next_step"] = (
+                "Call hearth_briefing() to get context about who you're talking to, "
+                "what's been happening, and how to close this session."
+            )
+        return existing
+
+    # No open session — create a new one
     try:
         session = db.create_session(project=project)
     except ValueError as e:

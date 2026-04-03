@@ -269,6 +269,42 @@ class TestEmbeddingStorage:
         assert pending[0]["id"] == mem2["id"]
 
 
+# ── Session: get_open_session ─────────────────────────────────────────
+
+
+class TestGetOpenSession:
+    def test_no_open_session(self, tmp_db: HearthDB) -> None:
+        assert tmp_db.get_open_session() is None
+
+    def test_finds_open_session(self, tmp_db: HearthDB) -> None:
+        session = tmp_db.create_session()
+        found = tmp_db.get_open_session()
+        assert found is not None
+        assert found["id"] == session["id"]
+
+    def test_ignores_closed_session(self, tmp_db: HearthDB) -> None:
+        session = tmp_db.create_session()
+        tmp_db.close_session(session["id"], summary="done")
+        assert tmp_db.get_open_session() is None
+
+    def test_scoped_to_project(self, seeded_db: HearthDB) -> None:
+        s_alpha = seeded_db.create_session(project="project-alpha")
+        found_alpha = seeded_db.get_open_session(project="project-alpha")
+        found_beta = seeded_db.get_open_session(project="project-beta")
+        assert found_alpha is not None
+        assert found_alpha["id"] == s_alpha["id"]
+        assert found_beta is None
+
+    def test_null_project_independent(self, seeded_db: HearthDB) -> None:
+        s_null = seeded_db.create_session()
+        s_alpha = seeded_db.create_session(project="project-alpha")
+        found_null = seeded_db.get_open_session()
+        found_alpha = seeded_db.get_open_session(project="project-alpha")
+        assert found_null["id"] == s_null["id"]
+        assert found_alpha["id"] == s_alpha["id"]
+        assert found_null["id"] != found_alpha["id"]
+
+
 # ── Stats & Export ──────────────────────────────────────────────────
 
 

@@ -504,6 +504,25 @@ class HearthDB:
 
     # ── Session CRUD ───────────────────────────────────────────────
 
+    def get_open_session(self, project: str | None = None) -> dict[str, Any] | None:
+        """Find an open (unclosed) session for a project. Returns None if no open session exists."""
+        cursor = self.conn.cursor()
+        if project is not None:
+            cursor.execute(
+                "SELECT * FROM sessions WHERE project = ? AND ended_at IS NULL "
+                "ORDER BY started_at DESC LIMIT 1",
+                (project,),
+            )
+        else:
+            cursor.execute(
+                "SELECT * FROM sessions WHERE project IS NULL AND ended_at IS NULL "
+                "ORDER BY started_at DESC LIMIT 1",
+            )
+        row = next(cursor, None)
+        if row is None:
+            return None
+        return self._row_to_dict(cursor, row)
+
     def create_session(self, project: str | None = None) -> dict[str, Any]:
         """Start a new session. Returns the created session as a dict."""
         if project is not None:

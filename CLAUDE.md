@@ -122,7 +122,7 @@ Memories degrade naturally when unused and surface for human review:
 ## Session Start Protocol
 
 When beginning a new session, follow this sequence:
-1. `session_start` (scoped to project if applicable)
+1. `session_start` (scoped to project if applicable) — if an open session already exists for the project, it returns that session with `resumed: true` instead of creating a duplicate. This is safe to call multiple times.
 2. `hearth_briefing` (scoped to same project — get full context and resonance scoring guide)
 
 The briefing tells you who you're talking to, what's been going on, what's unresolved,
