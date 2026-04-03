@@ -282,10 +282,7 @@ async def test_session_start_creates_new_after_close(fresh_ctx) -> None:
     from hearth.server import session_close, session_start
 
     s1 = await session_start(ctx=fresh_ctx)
-    await session_close(
-        session_id=s1["id"], summary="done",
-        exploration_execution=0.5, ctx=fresh_ctx,
-    )
+    await session_close(session_id=s1["id"], summary="done", ctx=fresh_ctx)
     s2 = await session_start(ctx=fresh_ctx)
     assert s2["id"] != s1["id"]
     assert "resumed" not in s2
@@ -333,14 +330,12 @@ async def test_session_close(fresh_ctx) -> None:
     result = await session_close(
         session_id=session["id"],
         summary="Test session",
-        exploration_execution=0.8,
-        alignment_tension=0.5,
         ctx=fresh_ctx,
     )
     assert result["ended_at"] is not None
     assert result["summary"] == "Test session"
-    assert "resonance" in result
-    assert result["resonance"]["exploration_execution"] == 0.8
+    assert "next_step" in result
+    assert "session_score" in result["next_step"]
 
 
 @pytest.mark.asyncio
@@ -351,80 +346,174 @@ async def test_session_close_not_found(fresh_ctx) -> None:
     assert "error" in result
 
 
-# ── Resonance Zero Rejection ──────────────────────────────────────
+# ── Resonance String Parser ──────────────────────────────────────
+
+
+class TestParseResonanceString:
+    def test_short_names(self) -> None:
+        from hearth.server import _parse_resonance_string
+
+        result = _parse_resonance_string(
+            "exploration=-0.8, alignment=0.5, depth=-0.3, momentum=0.5, "
+            "novelty=-0.4, confidence=0.4, autonomy=-0.5, energy=0.2, "
+            "vulnerability=0.1, stakes=0.3, mutual=-0.2"
+        )
+        assert result["exploration_execution"] == -0.8
+        assert result["alignment_tension"] == 0.5
+        assert result["stakes_casual"] == 0.3
+
+    def test_full_names(self) -> None:
+        from hearth.server import _parse_resonance_string
+
+        result = _parse_resonance_string("exploration_execution=-0.8, alignment_tension=0.5")
+        assert result["exploration_execution"] == -0.8
+        assert result["alignment_tension"] == 0.5
+
+    def test_partial(self) -> None:
+        from hearth.server import _parse_resonance_string
+
+        result = _parse_resonance_string("exploration=-0.5, stakes=0.3")
+        assert result["exploration_execution"] == -0.5
+        assert result["stakes_casual"] == 0.3
+        assert result["depth_breadth"] == 0.0
+
+    def test_invalid_axis(self) -> None:
+        from hearth.server import _parse_resonance_string
+
+        result = _parse_resonance_string("bogus=0.5")
+        assert "error" in result
+
+    def test_invalid_value(self) -> None:
+        from hearth.server import _parse_resonance_string
+
+        result = _parse_resonance_string("exploration=abc")
+        assert "error" in result
+
+    def test_out_of_range(self) -> None:
+        from hearth.server import _parse_resonance_string
+
+        result = _parse_resonance_string("exploration=1.5")
+        assert "error" in result
+
+    def test_empty(self) -> None:
+        from hearth.server import _parse_resonance_string
+
+        result = _parse_resonance_string("")
+        assert all(v == 0.0 for v in result.values())
+
+    def test_whitespace_tolerant(self) -> None:
+        from hearth.server import _parse_resonance_string
+
+        result = _parse_resonance_string("exploration = -0.8 , alignment = 0.5")
+        assert result["exploration_execution"] == -0.8
+        assert result["alignment_tension"] == 0.5
+
+
+# ── Session Score Tool ───────────────────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_session_close_rejects_all_zeros(fresh_ctx) -> None:
-    from hearth.server import session_close, session_start
+async def test_session_score_valid(fresh_ctx) -> None:
+    from hearth.server import session_close, session_score, session_start
 
     session = await session_start(ctx=fresh_ctx)
-    result = await session_close(session_id=session["id"], summary="Test", ctx=fresh_ctx)
+    await session_close(session_id=session["id"], summary="Test", ctx=fresh_ctx)
+    result = await session_score(
+        session_id=session["id"],
+        resonance="exploration=-0.5, alignment=0.7, depth=0.3",
+        ctx=fresh_ctx,
+    )
+    assert "error" not in result
+    assert result["resonance"]["exploration_execution"] == -0.5
+    assert result["resonance"]["alignment_tension"] == 0.7
+
+
+@pytest.mark.asyncio
+async def test_session_score_rejects_all_zeros(fresh_ctx) -> None:
+    from hearth.server import session_close, session_score, session_start
+
+    session = await session_start(ctx=fresh_ctx)
+    await session_close(session_id=session["id"], summary="Test", ctx=fresh_ctx)
+    result = await session_score(
+        session_id=session["id"],
+        resonance="exploration=0, alignment=0",
+        ctx=fresh_ctx,
+    )
     assert "error" in result
     assert "0.0" in result["error"]
-    # Session should NOT be closed
+
+
+@pytest.mark.asyncio
+async def test_session_score_rejects_duplicate(fresh_ctx) -> None:
+    from hearth.server import session_close, session_score, session_start
+
+    session = await session_start(ctx=fresh_ctx)
+    await session_close(session_id=session["id"], summary="Test", ctx=fresh_ctx)
+    await session_score(
+        session_id=session["id"],
+        resonance="exploration=-0.5",
+        ctx=fresh_ctx,
+    )
+    result = await session_score(
+        session_id=session["id"],
+        resonance="exploration=0.3",
+        ctx=fresh_ctx,
+    )
+    assert "error" in result
+    assert "already has resonance" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_session_score_nonexistent_session(fresh_ctx) -> None:
+    from hearth.server import session_score
+
+    result = await session_score(
+        session_id="nonexistent",
+        resonance="exploration=-0.5",
+        ctx=fresh_ctx,
+    )
+    assert "error" in result
+
+
+# ── Full Ceremony Integration ────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_full_ceremony(fresh_ctx) -> None:
+    from hearth.server import hearth_briefing, session_close, session_score, session_start
+
+    # 1. Start
+    s = await session_start(ctx=fresh_ctx)
+    assert s["id"]
+    assert "next_step" in s
+
+    # 2. Briefing
+    b = await hearth_briefing(ctx=fresh_ctx)
+    assert "briefing" in b
+
+    # 3. Close
+    c = await session_close(session_id=s["id"], summary="Test ceremony", ctx=fresh_ctx)
+    assert c["ended_at"] is not None
+    assert "session_score" in c["next_step"]
+
+    # 4. Score
+    r = await session_score(
+        session_id=s["id"],
+        resonance="exploration=-0.5, alignment=0.7, depth=0.3, momentum=0.6, "
+                  "novelty=-0.2, confidence=0.5, autonomy=-0.3, energy=0.4, "
+                  "vulnerability=0.2, stakes=0.3, mutual=0.1",
+        ctx=fresh_ctx,
+    )
+    assert "error" not in r
+    assert r["resonance"]["exploration_execution"] == -0.5
+    assert r["resonance"]["mutual_transactional"] == 0.1
+
+    # Verify in DB
     db = fresh_ctx.request_context.lifespan_context["db"]
-    s = db.get_session(session["id"])
-    assert s["ended_at"] is None
-
-
-@pytest.mark.asyncio
-async def test_session_close_accepts_partial_zeros(fresh_ctx) -> None:
-    from hearth.server import session_close, session_start
-
-    session = await session_start(ctx=fresh_ctx)
-    result = await session_close(
-        session_id=session["id"],
-        summary="Partial",
-        exploration_execution=0.8,
-        ctx=fresh_ctx,
-    )
-    assert "error" not in result
-    assert result["ended_at"] is not None
-    assert "resonance" in result
-
-
-@pytest.mark.asyncio
-async def test_session_close_accepts_negative_scores(fresh_ctx) -> None:
-    from hearth.server import session_close, session_start
-
-    session = await session_start(ctx=fresh_ctx)
-    result = await session_close(
-        session_id=session["id"],
-        summary="Negative",
-        exploration_execution=-0.5,
-        alignment_tension=-0.3,
-        stakes_casual=-0.8,
-        ctx=fresh_ctx,
-    )
-    assert "error" not in result
-    assert result["ended_at"] is not None
-
-
-@pytest.mark.asyncio
-async def test_session_close_accepts_mixed_scores(fresh_ctx) -> None:
-    from hearth.server import session_close, session_start
-
-    session = await session_start(ctx=fresh_ctx)
-    result = await session_close(
-        session_id=session["id"],
-        summary="Mixed",
-        exploration_execution=0.8,
-        alignment_tension=-0.3,
-        depth_breadth=0.5,
-        momentum_resistance=-0.7,
-        novelty_familiarity=0.2,
-        confidence_uncertainty=-0.4,
-        autonomy_direction=0.6,
-        energy_entropy=-0.1,
-        vulnerability_performance=0.3,
-        stakes_casual=-0.5,
-        mutual_transactional=0.4,
-        ctx=fresh_ctx,
-    )
-    assert "error" not in result
-    assert result["ended_at"] is not None
-    assert "resonance" in result
+    session = db.get_session(s["id"])
+    assert session["ended_at"] is not None
+    res = db.get_resonance(s["id"])
+    assert res is not None
 
 
 @pytest.mark.asyncio
@@ -832,10 +921,7 @@ async def test_two_session_lifecycle(fresh_ctx) -> None:
     tension_id = r1["tensions_created"][0]["id"]
 
     # Close session 1
-    await session_close(
-        session_id=s1["id"], summary="Initial exploration",
-        exploration_execution=0.7, ctx=fresh_ctx,
-    )
+    await session_close(session_id=s1["id"], summary="Initial exploration", ctx=fresh_ctx)
 
     # ── Session 2 ──────────────────────────────────────────────
     s2 = await session_start(ctx=fresh_ctx)
@@ -872,10 +958,7 @@ async def test_two_session_lifecycle(fresh_ctx) -> None:
     assert r2["errors"] == []
 
     # Close session 2
-    await session_close(
-        session_id=s2["id"], summary="Deepened the thread",
-        depth_breadth=0.6, ctx=fresh_ctx,
-    )
+    await session_close(session_id=s2["id"], summary="Deepened the thread", ctx=fresh_ctx)
 
     # ── Verify Final State ─────────────────────────────────────
     db = fresh_ctx.request_context.lifespan_context["db"]

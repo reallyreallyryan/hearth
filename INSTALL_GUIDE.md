@@ -336,7 +336,7 @@ Claude should call `session_start` and return a session ID. If a session is alre
 
 > Close this session. We were exploring new territory, had great momentum, and I was leading the direction.
 
-Claude should call `session_close` with a summary and resonance axis values (at least one axis must be non-zero — all-zero scores are rejected). You can view the resulting radar chart in `hearth ui`.
+Claude should call `session_close` with a summary, then `session_score` with a resonance string like `exploration=0.8, momentum=0.7, autonomy=0.6`. You can view the resulting radar chart in `hearth ui`.
 
 ---
 

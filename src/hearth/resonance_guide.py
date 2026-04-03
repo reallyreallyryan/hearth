@@ -137,6 +137,15 @@ def format_resonance_guide(token_budget: int | None = None) -> str:
     lines.append("## Resonance Scoring Guide")
     lines.append("")
     lines.append(
+        "After closing with `session_close`, call `session_score` with a resonance string. "
+        "Use short names: exploration, alignment, depth, momentum, novelty, "
+        "confidence, autonomy, energy, vulnerability, stakes, mutual. "
+        "Example: session_score(session_id=\"...\", resonance=\"exploration=-0.5, alignment=0.7, depth=0.3, "
+        "momentum=0.6, novelty=-0.2, confidence=0.5, autonomy=-0.3, energy=0.4, "
+        "vulnerability=0.2, stakes=0.3, mutual=0.1\")"
+    )
+    lines.append("")
+    lines.append(
         "Score each axis from -1.0 to 1.0. No axis is inherently good or bad — "
         "both poles are valid states. Score what actually happened, not what you "
         "think the human wants to hear."
@@ -164,6 +173,7 @@ def _format_compact() -> str:
     """Produce a minimal version of the guide — axis names and poles only."""
     lines: list[str] = []
     lines.append("## Resonance Scoring Guide (compact)")
+    lines.append("After `session_close`, call `session_score` with short axis names.")
     lines.append("Score each axis from -1.0 to 1.0.")
     lines.append("")
     for axis_name in RESONANCE_AXES:

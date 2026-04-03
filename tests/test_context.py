@@ -413,7 +413,9 @@ class TestHearthContextTool:
         """Model can re-request resonance guide mid-conversation."""
         from hearth.server import hearth_context
 
-        result = await hearth_context(query="resonance scoring guide", ctx=ctx)
+        result = await hearth_context(
+            query="resonance scoring guide", token_budget=2000, ctx=ctx,
+        )
         assert "Resonance Scoring Guide" in result["context"]
         for axis in RESONANCE_AXES:
             assert axis in result["context"]

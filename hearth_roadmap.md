@@ -74,7 +74,7 @@ A single SQLite database (`hearth.db`) containing:
 
 **Memory:** memory_store, memory_search, memory_list, memory_update, memory_delete
 **Projects:** project_create, project_list, project_get, project_update, project_archive
-**Sessions & Resonance:** session_start, session_close, session_resonance_search, session_history
+**Sessions & Resonance:** session_start, session_close, session_score, session_resonance_search, session_history
 **Threads & Tension:** thread_list, tension_list, session_reflect
 **System:** hearth_status, hearth_export
 

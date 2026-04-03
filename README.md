@@ -135,7 +135,7 @@ Each axis is a float from -1.0 to 1.0. The AI model self-reports these values at
 
 1. **Start:** The AI calls `session_start` then `hearth_briefing` — if an open session already exists for the project, `session_start` returns it instead of creating a duplicate (with `resumed: true`). The briefing assembles recent sessions with resonance descriptions, active threads, open tensions, drift trends, high-vitality memories, and the resonance scoring guide. The model immediately knows who it's talking to, what's been going on, and how to close the session.
 2. **During:** Any `memory_store` calls can include a `session_id` to auto-link memories to the session. Call `hearth_context("topic")` for on-demand RAG across all data sources.
-3. **Close:** The AI calls `session_reflect` (threads/tensions), optionally `hearth_context("resonance scoring guide")` to refresh the axis definitions, then `session_close` with a qualitative summary and its self-assessment of all 11 axes. All-zero resonance scores are rejected — the model must provide at least one non-zero score.
+3. **Close:** The AI calls `session_reflect` (threads/tensions), then `session_close` with a qualitative summary, then `session_score` with a resonance string using short axis names (e.g., `exploration=-0.5, alignment=0.7`). All-zero resonance scores are rejected.
 4. **Search:** `session_resonance_search` finds past sessions that *felt* similar — picking up momentum instead of starting from zero.
 
 Resonance data is stored as both a structured table (queryable by individual axis) and an 11-float vector in a sqlite-vec vec0 table (searchable by similarity).
@@ -162,7 +162,7 @@ Resonance captures *how* a session felt. Threads and tension capture *where the 
 
 1. **Session start:** The AI calls `hearth_briefing` which includes active threads and open tensions alongside session history, resonance descriptions, and the scoring guide
 2. **During:** The conversation picks up threads and engages with tensions naturally. Call `hearth_context("topic")` for on-demand context.
-3. **Session close:** The AI calls `session_reflect` to create/update threads, add perspectives to tensions, and resolve tensions — all in a single batch call alongside `session_close`
+3. **Session close:** The AI calls `session_reflect` to create/update threads, add perspectives to tensions, and resolve tensions — then `session_close` (summary) and `session_score` (resonance)
 
 Together with sessions and resonance, threads and tensions reconstruct not just the state of a collaboration but its **trajectory and unfinished business**.
 
@@ -284,7 +284,8 @@ When connected, Hearth exposes 21 tools to any MCP client:
 | Tool | What it does |
 |------|-------------|
 | `session_start` | Start or resume a session, optionally scoped to a project (returns existing open session if one exists) |
-| `session_close` | Close a session with a summary and 11-axis resonance assessment (rejects all-zero scores) |
+| `session_close` | Close a session with a summary |
+| `session_score` | Score a session's resonance via a short-name string (e.g., `exploration=-0.5, alignment=0.7`) |
 | `session_resonance_search` | Find past sessions with similar emotional texture |
 | `session_history` | List recent sessions with their resonance data |
 

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("hearth.context")
 
 # Keywords that trigger inclusion of the resonance guide in context queries
-_RESONANCE_KEYWORDS = {"resonance", "scoring", "axes", "guide", "session_close"}
+_RESONANCE_KEYWORDS = {"resonance", "scoring", "axes", "guide", "session_close", "session_score"}
 
 # Safety margin: pack to 90% of budget
 _SAFETY_MARGIN = 0.90
@@ -229,10 +229,12 @@ class ContextAssembler:
 
     def _build_preamble(self) -> str:
         return (
-            "At the end of this session, you will be asked to close the session "
-            "with `session_close`. This requires a qualitative summary and scores "
-            "on 11 resonance axes (floats from -1.0 to 1.0). The full axis "
-            "definitions and scoring guide are at the end of this briefing."
+            "At the end of this session, close with two calls: "
+            "`session_close` (summary) then `session_score` (resonance string). "
+            "The resonance string uses short names: exploration, alignment, depth, "
+            "momentum, novelty, confidence, autonomy, energy, vulnerability, stakes, mutual. "
+            "Each value is a float from -1.0 to 1.0. The full axis definitions "
+            "and scoring guide are at the end of this briefing."
         )
 
     def _build_trailing_guide(self, budget: int) -> str:

@@ -10,11 +10,60 @@ from typing import Any
 from mcp.server.fastmcp import Context, FastMCP
 
 from hearth import __version__
-from hearth.config import HearthConfig, load_config
+from hearth.config import RESONANCE_AXES, HearthConfig, load_config
 from hearth.db import HearthDB
 from hearth.embeddings import OllamaEmbedder
 from hearth.context import ContextAssembler
 from hearth.search import hybrid_search
+
+# Short name → full axis name mapping for session_score parsing
+_AXIS_SHORT_NAMES = {
+    "exploration": "exploration_execution",
+    "alignment": "alignment_tension",
+    "depth": "depth_breadth",
+    "momentum": "momentum_resistance",
+    "novelty": "novelty_familiarity",
+    "confidence": "confidence_uncertainty",
+    "autonomy": "autonomy_direction",
+    "energy": "energy_entropy",
+    "vulnerability": "vulnerability_performance",
+    "stakes": "stakes_casual",
+    "mutual": "mutual_transactional",
+}
+
+
+def _parse_resonance_string(resonance: str) -> dict[str, float]:
+    """Parse a resonance string like 'exploration=-0.8, alignment=0.5, ...'
+    into a full 11-axis dict. Missing axes default to 0.0.
+    Accepts both short names (exploration) and full names (exploration_execution).
+    """
+    axes = {axis: 0.0 for axis in RESONANCE_AXES}
+
+    parts = [p.strip() for p in resonance.split(",") if "=" in p]
+
+    for part in parts:
+        key, _, value = part.partition("=")
+        key = key.strip().lower()
+        value = value.strip()
+
+        # Map short name to full name
+        if key in _AXIS_SHORT_NAMES:
+            key = _AXIS_SHORT_NAMES[key]
+
+        if key not in axes:
+            return {"error": f"Unknown axis '{key}'. Valid short names: {', '.join(sorted(_AXIS_SHORT_NAMES.keys()))}"}
+
+        try:
+            fval = float(value)
+        except ValueError:
+            return {"error": f"Invalid value '{value}' for axis '{key}'. Must be a float from -1.0 to 1.0"}
+
+        if fval < -1.0 or fval > 1.0:
+            return {"error": f"Axis '{key}' value {fval} out of range. Must be -1.0 to 1.0"}
+
+        axes[key] = fval
+
+    return axes
 
 # All logging to stderr — stdout is reserved for MCP stdio transport
 logging.basicConfig(
@@ -387,69 +436,21 @@ async def session_start(
 @mcp.tool(
     name="session_close",
     description=(
-        "Close a session with a summary and 11-axis resonance assessment. "
-        "Each axis is a float from -1.0 to 1.0. Call at the end of a conversation. "
-        "See the resonance scoring guide from hearth_briefing for axis definitions "
-        "and calibration hints. If the briefing has scrolled out of context, call "
-        "hearth_context(query='resonance scoring guide') to retrieve it."
+        "Close a session with a summary. Call at the end of a conversation. "
+        "After closing, call session_score to record your resonance assessment. "
+        "See the resonance scoring guide from hearth_briefing for axis definitions."
     ),
 )
 async def session_close(
     session_id: str,
     summary: str | None = None,
-    exploration_execution: float = 0.0,
-    alignment_tension: float = 0.0,
-    depth_breadth: float = 0.0,
-    momentum_resistance: float = 0.0,
-    novelty_familiarity: float = 0.0,
-    confidence_uncertainty: float = 0.0,
-    autonomy_direction: float = 0.0,
-    energy_entropy: float = 0.0,
-    vulnerability_performance: float = 0.0,
-    stakes_casual: float = 0.0,
-    mutual_transactional: float = 0.0,
     ctx: Context = None,
 ) -> dict[str, Any]:
     db = _get_db(ctx)
 
-    axes = {
-        "exploration_execution": exploration_execution,
-        "alignment_tension": alignment_tension,
-        "depth_breadth": depth_breadth,
-        "momentum_resistance": momentum_resistance,
-        "novelty_familiarity": novelty_familiarity,
-        "confidence_uncertainty": confidence_uncertainty,
-        "autonomy_direction": autonomy_direction,
-        "energy_entropy": energy_entropy,
-        "vulnerability_performance": vulnerability_performance,
-        "stakes_casual": stakes_casual,
-        "mutual_transactional": mutual_transactional,
-    }
-
-    # Reject all-zero resonance (local models skip optional params)
-    if all(v == 0.0 for v in axes.values()):
-        return {
-            "error": "All resonance scores are 0.0. This usually means scores were skipped. "
-                     "Please score each axis from -1.0 to 1.0 based on how this session actually felt. "
-                     "Use the resonance scoring guide from hearth_briefing for definitions. "
-                     "If the guide has scrolled out of context, call hearth_context(query='resonance scoring guide') to retrieve it. "
-                     "No axis is inherently good or bad — both poles are valid. Score what happened, not what sounds right.",
-            "session_id": session_id,
-            "hint": "Even a short session has texture. A quick setup session might be: "
-                    "exploration_execution=-0.8 (pure execution), stakes_casual=-0.5 (low stakes), "
-                    "mutual_transactional=-0.3 (somewhat transactional). Zeros mean 'I didn't try.'",
-        }
-
     session = db.close_session(session_id, summary=summary)
     if session is None:
         return {"error": f"Session '{session_id}' not found"}
-
-    try:
-        resonance = db.store_resonance(session_id, axes)
-    except ValueError as e:
-        return {"error": str(e)}
-
-    session["resonance"] = resonance
 
     # Increment session close counter; trigger vitality computation every Nth close
     close_count = db.increment_session_close_count()
@@ -458,7 +459,64 @@ async def session_close(
         transitions = db.compute_vitality(config.vitality)
         session["vitality_transitions"] = transitions
 
+    session["next_step"] = (
+        "Call session_score to record your resonance assessment. "
+        "Pass a resonance string like: exploration=-0.8, alignment=0.5, depth=-0.3, "
+        "momentum=0.5, novelty=-0.4, confidence=0.4, autonomy=-0.5, energy=0.2, "
+        "vulnerability=0.1, stakes=0.3, mutual=-0.2"
+    )
     return session
+
+
+@mcp.tool(
+    name="session_score",
+    description=(
+        "Score a session's resonance after closing it. "
+        "Pass a comma-separated string of axis=value pairs. "
+        "Short names: exploration, alignment, depth, momentum, novelty, "
+        "confidence, autonomy, energy, vulnerability, stakes, mutual. "
+        "Each value is a float from -1.0 to 1.0. "
+        "Example: 'exploration=-0.8, alignment=0.5, depth=-0.3, "
+        "momentum=0.5, novelty=-0.4, confidence=0.4, autonomy=-0.5, "
+        "energy=0.2, vulnerability=0.1, stakes=0.3, mutual=-0.2'"
+    ),
+)
+async def session_score(
+    session_id: str,
+    resonance: str,
+    ctx: Context = None,
+) -> dict[str, Any]:
+    db = _get_db(ctx)
+
+    session = db.get_session(session_id)
+    if session is None:
+        return {"error": f"Session '{session_id}' not found"}
+
+    existing = db.get_resonance(session_id)
+    if existing is not None:
+        return {"error": f"Session '{session_id}' already has resonance scores"}
+
+    axes = _parse_resonance_string(resonance)
+    if "error" in axes:
+        return axes
+
+    if all(v == 0.0 for v in axes.values()):
+        return {
+            "error": "All resonance scores are 0.0. This usually means scores were skipped. "
+                     "Please score each axis from -1.0 to 1.0 based on how this session actually felt. "
+                     "No axis is inherently good or bad — both poles are valid. "
+                     "Score what happened, not what sounds right.",
+            "session_id": session_id,
+            "hint": "Even a short session has texture. A quick setup session might be: "
+                    "exploration=-0.8, stakes=-0.5, mutual=-0.3",
+        }
+
+    try:
+        resonance_data = db.store_resonance(session_id, axes)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    return {"session_id": session_id, "resonance": resonance_data}
 
 
 @mcp.tool(
